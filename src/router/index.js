@@ -1,18 +1,18 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 
-//Route modules
 import authRoutes from './modules/auth'
 import userRoutes from './modules/user'
 import adminRoutes from './modules/admin'
 
 import NotFoundView from '@/views/errors/NotFoundView.vue'
 
+const LOGIN_PATH = '/auth/login'
+const DASHBOARD_PATH = '/dashboard'
+const ACCOUNT_STATUS_PATH = '/account-status'
+
 const routes = [
-  {
-    path: '/',
-    redirect: '/dashboard',
-  },
+  { path: '/', redirect: DASHBOARD_PATH },
   ...authRoutes,
   ...userRoutes,
   ...adminRoutes,
@@ -20,62 +20,55 @@ const routes = [
     path: '/:pathMatch(.*)*',
     name: 'NotFound',
     component: NotFoundView,
-    meta: { title: 'Page Not Found' },
+    meta: { title: 'Sayfa Bulunamadı' },
   },
 ]
 
 const router = createRouter({
   history: createWebHistory(),
   routes,
-
-  scrollBehavior(to, from, savedPosition) {
-    if (savedPosition) {
-      return savedPosition
-    } else {
-      return { top: 0 }
-    }
-  },
+  scrollBehavior: () => ({ top: 0 }),
 })
 
-// Global navigation guard
 router.beforeEach(async (to, from, next) => {
   const authStore = useAuthStore()
 
   if (!authStore.isAuthenticated && !authStore.loading) {
-    await authStore.initializeAuth() // ÖNEMLİ: initializeAuth() işleminin tamamlanmasını BEKLE
+    await authStore.initializeAuth()
   }
 
-  const appName = import.meta.env.VITE_APP_NAME || 'HistopathAI'
+  const user = authStore.user
+  const isInactive =
+    user?.status === 'pending' || user?.status === 'suspended' || user?.status === 'deactivated'
+
+  const appName = import.meta.env.VITE_APP_NAME || 'Uygulama'
   document.title = to.meta.title ? `${to.meta.title} - ${appName}` : appName
 
-  // 1. Guest routes control
+  // 👇 Eğer kullanıcı giriş yaptıysa ama aktif değilse → account-status sayfasına yönlendir
+  if (
+    authStore.isAuthenticated &&
+    isInactive &&
+    to.path !== ACCOUNT_STATUS_PATH &&
+    to.path !== LOGIN_PATH
+  ) {
+    return next(ACCOUNT_STATUS_PATH)
+  }
+
   if (to.meta.requiresGuest) {
-    if (authStore.isAuthenticated) {
-      return next('/dashboard')
+    if (authStore.isAuthenticated && !isInactive) {
+      return next(DASHBOARD_PATH)
     }
     return next()
   }
 
-  // 2. authenticated routes control
-  if (to.meta.requiresAuth) {
-    if (!authStore.isAuthenticated) {
-      return next('/auth/login')
-    }
-
-    // 3. active status routes control
-    if (to.meta.requiresActive && !authStore.isActive) {
-      if (to.path !== '/dashboard') {
-        return next('/dashboard')
-      }
-    }
-
-    // 4. admin routes control
-    if (to.meta.requiresAdmin && !authStore.isAdmin) {
-      return next('/dashboard')
-    }
+  if (to.meta.requiresAuth && !authStore.isAuthenticated) {
+    return next(LOGIN_PATH)
   }
 
-  // 5. if all checks passed, proceed to the route
+  if (to.meta.requiresAdmin && authStore.user?.role !== 'admin') {
+    return next(DASHBOARD_PATH)
+  }
+
   next()
 })
 
