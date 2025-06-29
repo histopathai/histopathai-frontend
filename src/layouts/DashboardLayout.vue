@@ -5,7 +5,9 @@
         <div class="flex justify-between h-16">
           <!-- Sol - Uygulama Adı -->
           <div class="flex items-center">
-            <h1 class="text-xl font-semibold text-gray-900">{{ appName }}</h1>
+            <router-link to="/dashboard" class="text-xl font-semibold text-gray-900">
+              {{ appName }}
+            </router-link>
           </div>
 
           <!-- Sağ - Admin Link + Kullanıcı Menüsü -->
@@ -20,8 +22,8 @@
 
             <div class="relative">
               <button
-                @click="showUserMenu = !showUserMenu"
-                class="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                @click="toggleUserMenu"
+                class="user-menu-button flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
               >
                 <div
                   class="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center overflow-hidden"
@@ -35,10 +37,10 @@
                 </span>
               </button>
 
+              <!-- Dropdown Menü -->
               <div
                 v-if="showUserMenu"
-                v-click-away="() => (showUserMenu = false)"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                class="user-dropdown absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
               >
                 <router-link
                   to="/dashboard/profile"
@@ -99,7 +101,7 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
@@ -111,26 +113,38 @@ const toast = useToast()
 const appName = import.meta.env.VITE_APP_NAME || 'HistopathAI'
 const showUserMenu = ref(false)
 
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+  console.log('Menu toggled:', showUserMenu.value)
+}
+
 const handleLogout = () => {
+  showUserMenu.value = false
   authStore.logout()
   toast.success('Başarıyla çıkış yapıldı.')
   router.push('/auth/login')
 }
 
-// v-click-away direktifi: Menü dışına tıklamayı yakalayıp menüyü kapatır
-const vClickAway = {
-  beforeMount(el, binding) {
-    el.clickOutsideEvent = (event) => {
-      if (!(el === event.target || el.contains(event.target))) {
-        binding.value(event, el)
-      }
+// Click outside handler
+const handleClickOutside = (event) => {
+  const dropdownElement = document.querySelector('.user-dropdown')
+  const buttonElement = document.querySelector('.user-menu-button')
+
+  if (dropdownElement && buttonElement) {
+    if (!dropdownElement.contains(event.target) && !buttonElement.contains(event.target)) {
+      showUserMenu.value = false
     }
-    document.addEventListener('click', el.clickOutsideEvent)
-  },
-  unmounted(el) {
-    document.removeEventListener('click', el.clickOutsideEvent)
-  },
+  }
 }
+
+// Event listener ekleme/kaldırma
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
