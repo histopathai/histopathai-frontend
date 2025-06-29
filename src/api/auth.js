@@ -50,17 +50,21 @@ class UserAPI {
   register(payload) {
     return this.client.post('/auth/register', payload)
   }
+  // Backend'deki POST /auth/verify rotasına uyumlu
   verifyToken(token) {
-    return this.client.get(`/auth/verify-token/${token}`)
+    return this.client.post('/auth/verify', { token })
   }
+  // Backend'deki GET /user/profile rotasına uyumlu
   getProfile() {
-    return this.client.get('/auth/profile')
+    return this.client.get('/user/profile')
   }
+  // Backend'deki PUT /user/password rotasına uyumlu (ChangePasswordSelf)
   changePassword(payload) {
-    return this.client.post('/auth/password', payload)
+    return this.client.put('/user/password', payload)
   }
+  // Backend'deki DELETE /user/account rotasına uyumlu
   deleteAccount() {
-    return this.client.delete('/auth/delete-account')
+    return this.client.delete('/user/account')
   }
 }
 
@@ -68,8 +72,9 @@ class AdminAPI {
   constructor(client) {
     this.client = client
   }
+  // Backend'deki GET /admin/users/ rotasına (sondaki eğik çizgi ile) uyumlu
   getAllUsers() {
-    return this.client.get('/admin/users')
+    return this.client.get('/admin/users/')
   }
   getUser(uid) {
     return this.client.get(`/admin/users/${uid}`)
@@ -80,8 +85,14 @@ class AdminAPI {
   suspendUser(uid) {
     return this.client.post(`/admin/users/${uid}/suspend`)
   }
-  activateUser(uid) {
-    return this.client.post(`/admin/users/${uid}/activate`)
+
+  // Admin tarafında belirli bir kullanıcının şifresini değiştirmek için (YENİ EKLEME)
+  // Backend'deki PUT /admin/users/:uid/password rotasına uyumlu olacak.
+  changeUserPassword(uid, payload) {
+    return this.client.put(`/admin/users/${uid}/password`, payload)
+  }
+  makeAdmin(uid) {
+    return this.client.post(`/admin/users/${uid}/promote`)
   }
 }
 
