@@ -1,14 +1,13 @@
 import { defineStore } from 'pinia'
 import authAPI from '@/api/auth'
 
-// Kullanıcı durumları
 export const USER_STATUS = {
   PENDING: 'pending',
   ACTIVE: 'active',
   SUSPENDED: 'suspended',
+  DEACTIVATED: 'deactivated',
 }
 
-// Roller
 export const USER_ROLES = {
   ADMIN: 'admin',
   USER: 'user',
@@ -19,25 +18,16 @@ export const USER_ROLES = {
 export const useAuthStore = defineStore('auth', {
   state: () => ({
     user: null,
-    token: null,
+    token: localStorage.getItem('auth_token') || null,
     isAuthenticated: false,
     loading: false,
     error: null,
   }),
 
   getters: {
-    isAdmin: (state) => {
-      return state.user?.role === USER_ROLES.ADMIN
-    },
-
-    isActive: (state) => {
-      return state.user?.status === USER_STATUS.ACTIVE
-    },
-
-    canAccess: (state) => {
-      return state.isAuthenticated && state.user?.status === USER_STATUS.ACTIVE
-    },
-
+    isAdmin: (state) => state.user?.role === USER_ROLES.ADMIN,
+    isActive: (state) => state.user?.status === USER_STATUS.ACTIVE,
+    canAccess: (state) => state.isAuthenticated && state.user?.status === USER_STATUS.ACTIVE,
     userInitials: (state) => {
       if (!state.user?.displayName) return ''
       return state.user.displayName
@@ -58,8 +48,7 @@ export const useAuthStore = defineStore('auth', {
           this.token = token
           this.user = JSON.parse(userData)
           this.isAuthenticated = true
-        } catch (error) {
-          console.error('Stored user data parsing error:', error)
+        } catch {
           this.clearAuth()
         }
       }
@@ -68,20 +57,12 @@ export const useAuthStore = defineStore('auth', {
     async register(payload) {
       this.loading = true
       this.error = null
-
       try {
-        const response = await authAPI.user.register(payload)
-        if (response.data.user) {
-          this.user = response.data.user
-        }
-
-        return {
-          success: true,
-          message: response.data.message || 'Kayıt başarılı',
-        }
-      } catch (error) {
-        console.error('Kayıt hatası:', error)
-        this.error = error.response?.data?.message || 'Kayıt başarısız'
+        const res = await authAPI.user.register(payload)
+        if (res.data.user) this.user = res.data.user
+        return { success: true, message: res.data.message || 'Kayıt başarılı' }
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Kayıt başarısız'
         return { success: false, message: this.error }
       } finally {
         this.loading = false
@@ -91,17 +72,15 @@ export const useAuthStore = defineStore('auth', {
     async verifyToken(token) {
       this.loading = true
       this.error = null
-
       try {
-        const response = await authAPI.user.verifyToken({ token })
-        if (response.data.user) {
-          this.setAuthData(token, response.data.user)
-          return { success: true, user: response.data.user }
+        const res = await authAPI.user.verifyToken(token)
+        if (res.data.user) {
+          this.setAuthData(token, res.data.user)
+          return { success: true, user: res.data.user }
         }
         return { success: false, message: 'Geçersiz token veya kullanıcı bulunamadı' }
-      } catch (error) {
-        console.error('Token doğrulama hatası:', error)
-        this.error = error.response?.data?.message || 'Token doğrulanamadı'
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Token doğrulanamadı'
         this.clearAuth()
         return { success: false, message: this.error }
       } finally {
@@ -112,17 +91,16 @@ export const useAuthStore = defineStore('auth', {
     async getProfile() {
       this.loading = true
       this.error = null
-
       try {
-        const response = await authAPI.user.getProfile()
-        if (response.data.user) {
-          this.user = response.data.user
+        const res = await authAPI.user.getProfile()
+        if (res.data.user) {
+          this.user = res.data.user
           localStorage.setItem('user_data', JSON.stringify(this.user))
-          return { success: true, user: response.data.user }
+          return { success: true, user: res.data.user }
         }
         return { success: false, error: 'Profil bulunamadı' }
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Profil alınamadı'
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Profil alınamadı'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -132,12 +110,11 @@ export const useAuthStore = defineStore('auth', {
     async changePassword(payload) {
       this.loading = true
       this.error = null
-
       try {
         await authAPI.user.changePassword(payload)
         return { success: true, message: 'Şifre başarıyla değiştirildi' }
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Şifre değiştirilemedi'
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Şifre değiştirilemedi'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
@@ -147,13 +124,12 @@ export const useAuthStore = defineStore('auth', {
     async deleteAccount() {
       this.loading = true
       this.error = null
-
       try {
         await authAPI.user.deleteAccount()
         this.clearAuth()
         return { success: true, message: 'Hesap başarıyla silindi' }
-      } catch (error) {
-        this.error = error.response?.data?.message || 'Hesap silinemedi'
+      } catch (err) {
+        this.error = err.response?.data?.message || 'Hesap silinemedi'
         return { success: false, error: this.error }
       } finally {
         this.loading = false
