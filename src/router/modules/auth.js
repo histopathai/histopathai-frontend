@@ -1,6 +1,7 @@
 import AuthLayout from '@/layouts/AuthLayout.vue'
 import LoginView from '@/views/auth/LoginView.vue'
 import RegisterView from '@/views/auth/RegisterView.vue'
+import AccountStatusView from '@/views/auth/AccountStatusView.vue'
 
 export default [
   {
@@ -8,10 +9,7 @@ export default [
     component: AuthLayout,
     meta: { requiresGuest: true },
     children: [
-      {
-        path: '',
-        redirect: '/auth/login',
-      },
+      { path: '', redirect: '/auth/login' },
       {
         path: 'login',
         name: 'Login',
@@ -25,5 +23,11 @@ export default [
         meta: { title: 'Register' },
       },
     ],
+  },
+  {
+    path: '/account-status',
+    name: 'AccountStatus',
+    component: AccountStatusView,
+    meta: { requiresAuth: true, title: 'Hesap Durumu' },
   },
 ]
