@@ -44,12 +44,12 @@
 
       <div class="mt-6 flex flex-wrap gap-2">
         <button
-          v-if="user.status === USER_STATUS.PENDING || !user.adminApproved"
+          v-if="user.status === USER_STATUS.PENDING || user.status === USER_STATUS.SUSPENDED"
           @click="handleApproveUser"
           :disabled="loading"
           class="btn btn-primary btn-sm"
         >
-          Onayla
+          {{ user.status === USER_STATUS.PENDING ? 'Onayla' : 'Aktif Et' }}
         </button>
 
         <button
@@ -62,12 +62,12 @@
         </button>
 
         <button
-          v-if="user.status === USER_STATUS.SUSPENDED"
-          @click="handleActivateUser"
+          v-if="user.role !== USER_ROLES.ADMIN && user.status === USER_STATUS.ACTIVE"
+          @click="handleMakeAdmin"
           :disabled="loading"
-          class="btn btn-primary btn-sm"
+          class="btn btn-success btn-sm"
         >
-          Etkinleştir
+          Admin Yap
         </button>
       </div>
     </div>
@@ -94,6 +94,7 @@ const toast = useToast()
 const authAdminAPI = authAPI.admin
 
 const userInitials = computed(() => {
+  // DisplayName veya Email alanlarını camelCase olarak kullanıyoruz
   if (!props.user?.displayName) return props.user.email ? props.user.email[0].toUpperCase() : ''
   return props.user.displayName
     .split(' ')
@@ -174,8 +175,9 @@ const formatDate = (dateString) => {
 const executeAdminAction = async (actionFn, successMsg, errorMsg) => {
   loading.value = true
   try {
-    await actionFn(props.user.uid)
+    await actionFn(props.user.uid) // uid'yi camelCase olarak kullanıyoruz
     toast.success(successMsg)
+    // Güncellenmiş kullanıcıyı API'den tekrar çekiyoruz, uid'yi camelCase olarak kullanıyoruz
     const updatedUser = await authAdminAPI.getUser(props.user.uid)
     emit('user-updated', updatedUser.data.user)
   } catch (err) {
@@ -196,17 +198,17 @@ const handleApproveUser = () => {
 
 const handleSuspendUser = () => {
   executeAdminAction(
-    authAdminAPI.suspendUser,
+    (uid) => authAdminAPI.suspendUser(uid),
     'Kullanıcı başarıyla askıya alındı.',
     'Kullanıcı askıya alınırken hata oluştu.',
   )
 }
 
-const handleActivateUser = () => {
+const handleMakeAdmin = () => {
   executeAdminAction(
-    authAdminAPI.activateUser,
-    'Kullanıcı başarıyla etkinleştirildi.',
-    'Kullanıcı etkinleştirilirken hata oluştu.',
+    (uid) => authAdminAPI.makeAdmin(uid),
+    'Kullanıcı başarıyla yönetici yapıldı.',
+    'Kullanıcı yönetici yapılırken hata oluştu.',
   )
 }
 </script>
