@@ -1,5 +1,13 @@
+# Node modules
+node_modules/
+
+# Build outputs
+dist/
+dist-ssr/
+*.local
+
 # Logs
-logs
+logs/
 *.log
 npm-debug.log*
 yarn-debug.log*
@@ -7,24 +15,32 @@ yarn-error.log*
 pnpm-debug.log*
 lerna-debug.log*
 
-node_modules
-.DS_Store
-dist
-dist-ssr
-coverage
-*.local
-
-/cypress/videos/
-/cypress/screenshots/
-
-# Editor directories and files
+# Editor settings
 .vscode/*
 !.vscode/extensions.json
-.idea
+.idea/
 *.suo
 *.ntvs*
 *.njsproj
 *.sln
 *.sw?
-
 *.tsbuildinfo
+
+# Test outputs
+coverage/
+cypress/videos/
+cypress/screenshots/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Env files
+.env
+.env.*.local
+
+# Vitest cache
+coverage/
+*.test.*
+*.spec.*
+.vitest/
