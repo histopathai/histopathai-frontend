@@ -4,7 +4,9 @@
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex items-center space-x-8">
-            <h1 class="text-xl font-semibold text-gray-900">{{ appName }} Admin</h1>
+            <router-link to="/admin" class="text-xl font-semibold text-gray-900"
+              >{{ appName }} Admin</router-link
+            >
 
             <div class="hidden md:flex space-x-8">
               <router-link
@@ -36,8 +38,8 @@
 
             <div class="relative">
               <button
-                @click="showUserMenu = !showUserMenu"
-                class="flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                @click="toggleUserMenu"
+                class="admin-menu-button flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
                 aria-haspopup="true"
                 :aria-expanded="showUserMenu.toString()"
                 aria-controls="user-menu"
@@ -60,9 +62,8 @@
 
               <div
                 v-if="showUserMenu"
-                v-click-away="() => (showUserMenu = false)"
                 id="user-menu"
-                class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
+                class="admin-dropdown absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
                 role="menu"
                 aria-orientation="vertical"
                 tabindex="-1"
@@ -118,7 +119,7 @@
 </template>
 
 <script setup>
-import { ref, watch } from 'vue'
+import { ref, watch, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
@@ -130,14 +131,32 @@ const toast = useToast()
 const appName = import.meta.env.VITE_APP_NAME || 'HistopathAI'
 const showUserMenu = ref(false)
 
+const toggleUserMenu = () => {
+  showUserMenu.value = !showUserMenu.value
+  console.log('Admin menu toggled:', showUserMenu.value)
+}
+
 const handleLogout = async () => {
   try {
+    showUserMenu.value = false
     await authStore.logout()
     toast.success('Başarıyla çıkış yapıldı.')
     router.push('/auth/login')
   } catch (error) {
     toast.error('Çıkış yaparken hata oluştu.')
     console.error(error)
+  }
+}
+
+// Click outside handler
+const handleClickOutside = (event) => {
+  const dropdownElement = document.querySelector('.admin-dropdown')
+  const buttonElement = document.querySelector('.admin-menu-button')
+
+  if (dropdownElement && buttonElement) {
+    if (!dropdownElement.contains(event.target) && !buttonElement.contains(event.target)) {
+      showUserMenu.value = false
+    }
   }
 }
 
@@ -149,20 +168,14 @@ watch(
   },
 )
 
-// v-click-away directive'i burada lokal tanımlı, istersen global yapabilirsin
-const vClickAway = {
-  beforeMount(el, binding) {
-    el.clickOutsideEvent = (event) => {
-      if (!(el === event.target || el.contains(event.target))) {
-        binding.value(event, el)
-      }
-    }
-    document.addEventListener('click', el.clickOutsideEvent)
-  },
-  unmounted(el) {
-    document.removeEventListener('click', el.clickOutsideEvent)
-  },
-}
+// Event listener ekleme/kaldırma
+onMounted(() => {
+  document.addEventListener('click', handleClickOutside)
+})
+
+onUnmounted(() => {
+  document.removeEventListener('click', handleClickOutside)
+})
 </script>
 
 <style scoped>
