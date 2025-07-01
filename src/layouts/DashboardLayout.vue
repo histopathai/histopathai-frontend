@@ -8,6 +8,12 @@
             <router-link to="/dashboard" class="text-xl font-semibold text-gray-900">
               {{ appName }}
             </router-link>
+            <router-link
+              to="/wsi-viewer"
+              class="text-sm font-medium text-blue-600 hover:text-blue-800 gap-2 ml-4"
+            >
+              WSI Viewer
+            </router-link>
           </div>
 
           <!-- Sağ - Admin Link + Kullanıcı Menüsü -->
@@ -64,7 +70,7 @@
     </nav>
 
     <!-- Ana içerik -->
-    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+    <main class="w-full h-full flex flex-col">
       <!-- Hesap onay bekliyorsa uyarı -->
       <div
         v-if="authStore.user?.status === 'pending'"
@@ -93,7 +99,6 @@
           </div>
         </div>
       </div>
-
       <!-- Router View: Sayfa içerikleri burada yüklenecek -->
       <router-view />
     </main>

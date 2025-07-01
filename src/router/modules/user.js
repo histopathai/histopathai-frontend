@@ -1,6 +1,7 @@
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import DashboardView from '@/views/user/DashboardView.vue'
 import ProfileView from '@/views/user/ProfileView.vue'
+import SlideViewer from '@/components/wsi-viewer/SlideViewer.vue'
 
 
 export default [
@@ -20,6 +21,14 @@ export default [
         name: 'Profile',
         component: ProfileView,
         meta: { title: 'Profile' }
+      },
+      {
+        path: '/wsi-viewer',
+        name: 'SlideViewer',
+        component: SlideViewer,
+        meta: {
+          requiresAuth: true 
+        }
       }
     ]
   }
