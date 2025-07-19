@@ -1,9 +1,8 @@
+// src/router/modules/user.js - Fixed
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import DashboardView from '@/views/user/DashboardView.vue'
 import ProfileView from '@/views/user/ProfileView.vue'
-import SlideViewer from '@/components/wsi-viewer/SlideViewer.vue'
-
-
+import ImageViewer from '@/components/user/ImageViewer.vue'
 export default [
   {
     path: '/dashboard',
@@ -23,14 +22,15 @@ export default [
         meta: { title: 'Profile' }
       },
       {
-        path: '/wsi-viewer',
-        name: 'SlideViewer',
-        component: SlideViewer,
+        path: '/wsi-viewer', // Bu yolu DashboardLayout'taki router-link'e uygun hale getirdik
+        name: 'WSIViewer', // Yeni bir isim verilebilir veya ImageViewer kullanılabilir
+        component: ImageViewer, // ImageViewer bileşenini bu yola bağla
         meta: {
-          requiresAuth: true 
+          title: 'WSI Viewer',
+          requiresAuth: true,
+          requiresActive: true
         }
       }
     ]
   }
 ]
-
