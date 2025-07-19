@@ -1,153 +1,294 @@
+// src/api/image_catalog.js
 import axios from 'axios';
-const API_IMAGE_CATALOG_BASE_URL = import.meta.env.VITE_IMAGE_CATALOG_API_BASE_URL || 'http://localhost:3232/api/v1';
 
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000/api/v1';
+const IMG_CATALOG_BASE_URL = BACKEND_URL + '/image-catalog';
 
+// Regular API client (Bearer token için)
 const imageCatalogClient = axios.create({
-  baseURL : API_IMAGE_CATALOG_BASE_URL,
-  timeout : 10000,
+  baseURL: IMG_CATALOG_BASE_URL,
+  timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
   }
-})
+});
 
+// Auth client (Session oluşturmak için)
+const authClient = axios.create({
+  baseURL: BACKEND_URL,
+  timeout: 10000,
+  headers: {
+    'Content-Type': 'application/json',
+  }
+});
 
-//Request intercepter to attach authentication token
+// Request interceptors
 imageCatalogClient.interceptors.request.use(
   (config) => {
-    const token = localStorage.getItem('authToken');
+    const token = localStorage.getItem('auth_token');
     if (token) {
       config.headers['Authorization'] = `Bearer ${token}`;
     }
     return config;
   },
-  (error) => {
-    return Promise.reject(error);
-  }
+  (error) => Promise.reject(error)
 );
 
-//Response intercepter to handle errors globally
-imageCatalogClient.interceptors.response.use(
-  (response) => {
-    return response;
-  },
-  (error) => {
-    //if 401 Unauthorized, clear the token and redirect to login
-    if (error.response && error.response.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user_data');
-      if (!window.location.pathname.includes('/auth/')) {
-        window.location.href = '/auth/login';
-        }
+authClient.interceptors.request.use(
+  (config) => {
+    const token = localStorage.getItem('auth_token');
+    if (token) {
+      config.headers['Authorization'] = `Bearer ${token}`;
     }
-    return Promise.reject(error);
-  }
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
-
 
 class ImageCatalogAPI {
-  constructor(client) {
-    this.client = client;
+  constructor() {
+    this.imageSessionId = null;
+    this.sessionExpiry = null;
+    this.sessionCreatePromise = null; // Prevent multiple session creation
   }
 
+  /**
+   * 🚀 Create optimized session for image viewing
+   */
+  async createImageSession() {
+    // Prevent multiple simultaneous session creation
+    if (this.sessionCreatePromise) {
+      return this.sessionCreatePromise;
+    }
+
+    this.sessionCreatePromise = this._createSessionInternal();
+
+    try {
+      const result = await this.sessionCreatePromise;
+      return result;
+    } finally {
+      this.sessionCreatePromise = null;
+    }
+  }
+
+  async _createSessionInternal() {
+    try {
+      console.log('🔄 Creating optimized image session...');
+      const response = await authClient.post('/auth/image-session');
+
+      this.imageSessionId = response.data.session_id;
+      this.sessionExpiry = Date.now() + (response.data.expires_in * 1000);
+
+      console.log('✅ Image session created:', this.imageSessionId);
+      console.log('⏰ Session expires in:', response.data.expires_in, 'seconds');
+
+      return this.imageSessionId;
+    } catch (error) {
+      console.error('❌ Failed to create image session:', error);
+      throw error;
+    }
+  }
 
   /**
-   * Retrieves a single image by its ID.
-   * Corresponds to GET /api/v1/images/:image_id
-   * @param {string} imageId - The ID of the image to retrieve.
-   * @returns {Promise<AxiosResponse>} - The response containing the image data.
+   * 🎯 Get or create valid session (ultra-fast cached)
    */
-  getImageById(imageId) {
+  async getValidSessionId() {
+    // Check if current session is valid (with 5 minute buffer for safety)
+    const buffer = 5 * 60 * 1000; // 5 minutes
+    if (this.imageSessionId && this.sessionExpiry && (Date.now() + buffer) < this.sessionExpiry) {
+      return this.imageSessionId;
+    }
+
+    console.log('🔄 Session expired or missing, creating new one...');
+    return await this.createImageSession();
+  }
+
+  /**
+   * 📊 Get session statistics (for debugging)
+   */
+  async getSessionStats() {
+    try {
+      const response = await authClient.get('/auth/image-session/stats');
+      return response.data.stats;
+    } catch (error) {
+      console.error('❌ Failed to get session stats:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 🗑️ Revoke current session
+   */
+  async revokeCurrentSession() {
+    if (!this.imageSessionId) return;
+
+    try {
+      await authClient.delete(`/auth/image-session/${this.imageSessionId}`);
+      this.imageSessionId = null;
+      this.sessionExpiry = null;
+      console.log('✅ Session revoked successfully');
+    } catch (error) {
+      console.error('❌ Failed to revoke session:', error);
+    }
+  }
+
+  /**
+   * 🎬 API Methods with Bearer token authentication
+   * !!! BU KISIM GÜNCELLENDİ - İSTEKLERE SESSION PARAMETRESİ EKLENDİ !!!
+   */
+  async getImages(filters = {}) {
+    console.log('🔍 Fetching images with filters:', filters);
+
+    try {
+      // 🚀 Session'ı önceden oluştur ve ID'yi al
+      const sessionId = await this.getValidSessionId();
+      console.log('✅ Session ready for API request:', sessionId);
+
+      // API parametrelerine session ID'yi ekle
+      const params = { ...filters, session: sessionId };
+
+      // Bearer token ve session ile API call yap
+      const response = await imageCatalogClient.get('/images', { params });
+      return response;
+    } catch (error) {
+      console.error('❌ Error fetching images:', error);
+      throw error;
+    }
+  }
+
+  async getImageById(imageId) {
     if (!imageId) {
       return Promise.reject(new Error('Image ID is required'));
     }
-    return this.client.get(`/images/${imageId}`)
+
+    // Oluşturulmuş bir session al
+    const sessionId = await this.getValidSessionId();
+
+    // Session parametresi ekle
+    return imageCatalogClient.get(`/images/${imageId}`, {
+      params: { session: sessionId }
+    });
   }
 
-
-  /**
-   * Updates an image's metadata by its ID.
-   * Corresponds to PUT /api/v1/images/:image_id
-   * @param {string} imageId - The ID of the image to update.
-   * @param {Object} data - The metadata to update.
-   * @returns {Promise<AxiosResponse>} A promise that resolves with the updated image data.
-   */
   updateImageById(imageId, data) {
     if (!imageId) {
       return Promise.reject(new Error('Image ID is required'));
     }
-    return this.client.put(`/images/${imageId}`, data);
+    return imageCatalogClient.put(`/images/${imageId}`, data);
   }
 
-  /**
-   * Retrieves a list of images with optional filtering.
-   * Corresponds to: GET /api/v1/images
-   * @param {object} [filters] - An object containing filter parameters (e.g., { dataset_name: "CMB-BRCA", organ_type: "breast" }).
-   * @returns {Promise<AxiosResponse>} A promise that resolves with a list of images.
-   */
-  getImages(filters = {}) {
-    return this.client.get('/images', { params: filters });
-  }
-
-  /**
-   * Proxies a GCS object, used for fetching image tiles, DZI files, and thumbnails.
-   * Corresponds to: GET /api/v1/proxy/*objectPath
-   * @param {string} objectPath - The Full path of the object within the GCS bucket
-   * @returns {Promise<AxiosResponse>} A promise that resolves with the GCS object's content.
-   */
-  getGCSObject(objectPath) {
-    if (!objectPath) {
-      return Promise.reject(new Error('Object path is required'));
-    }
-
-    //The server-side trimPrfix will handle("/"), so we should not include a leading slash
-    const cleanedObjectPath = objectPath.startsWith('/') ? objectPath.slice(1) : objectPath;
-    return this.client.get(`/proxy/${cleanedObjectPath}`, {
-      responseType: `blob`, // Ensure the response is treated as a blob
-    });
-  }
-
-  /**
-   * Helper function to get the DZI file URL.
-   * @param {string} imageId - The ID of the image.
-   * @returns {string} The URL for the DZI file.
-   */
-  getDZIUrl(imageId) {
+  deleteImageById(imageId) {
     if (!imageId) {
-      throw new Error('Image ID is required to get DZI URL');
+      return Promise.reject(new Error('Image ID is required'));
     }
-    return `${API_IMAGE_CATALOG_BASE_URL}/images/${imageId}/image.dzi`;
-  }
-
-
-  /**
-   * Helper function to get the thumbnail URL.
-   * @param {string} imageId - The ID of the image.
-   * @returns {string} The full URL for the thumbnail.
-   */
-  getThumbnailUrl(imageId) {
-
-    if (!imageId) {
-      throw new Error('Image ID is required to get thumbnail URL');
-    }
-    return `${API_IMAGE_CATALOG_BASE_URL}/proxy/${imageId}/thumbnail.jpg`;
+    return imageCatalogClient.delete(`/images/${imageId}`);
   }
 
   /**
-   * Helper function to construct the base URL for image tiles.
-   * This is typically used by an OpenSeadragon viewer.
-   * @param {string} imageId - The ID of the image.
-   * @returns {string} The base URL for the image tiles.
+   * 🖼️ ULTRA-FAST Asset URLs with session authentication
    */
-  getImageTilesBaseUrl(imageId) {
-    if (!imageId) {
-      throw new Error('Image ID is required to get image tiles base URL');
-    }
+  async getDZIUrl(imageId) {
+    if (!imageId) throw new Error('Image ID is required');
 
-    // OpenSeadragon will append the tile path (e.g., /10/0_0.jpeg) to this base URL
-    return `${API_IMAGE_CATALOG_BASE_URL}/proxy/${imageId}/image_files/`;
+    const sessionId = await this.getValidSessionId();
+    const url = `${IMG_CATALOG_BASE_URL}/proxy/${imageId}/image.dzi?session=${sessionId}`;
+    console.log('🎯 DZI URL:', url);
+    return url;
+  }
+
+  async getThumbnailUrl(imageId) {
+    if (!imageId) throw new Error('Image ID is required');
+
+    const sessionId = await this.getValidSessionId();
+    const url = `${IMG_CATALOG_BASE_URL}/proxy/${imageId}/thumbnail.jpg?session=${sessionId}`;
+    return url;
+  }
+
+  async getImageTilesBaseUrl(imageId) {
+    if (!imageId) throw new Error('Image ID is required');
+
+    const sessionId = await this.getValidSessionId();
+    // OpenSeadragon will append tile paths like: /12/5_3.jpg
+    return `${IMG_CATALOG_BASE_URL}/proxy/${imageId}/image_files/?session=${sessionId}&tile=`;
+  }
+
+  /**
+   * 🔧 Advanced: Optimized tile source for OpenSeadragon
+   */
+  async createOptimizedTileSource(imageId) {
+    try {
+      console.log('🔧 Creating optimized tile source for:', imageId);
+
+      // Get DZI content through session
+      const sessionId = await this.getValidSessionId();
+      const dziUrl = `${IMG_CATALOG_BASE_URL}/proxy/${imageId}/image.dzi?session=${sessionId}`;
+
+      const dziResponse = await axios.get(dziUrl);
+      console.log('✅ DZI content fetched');
+
+      // Parse DZI XML
+      const parser = new DOMParser();
+      const xmlDoc = parser.parseFromString(dziResponse.data, 'text/xml');
+      const image = xmlDoc.getElementsByTagName('Image')[0];
+      const size = xmlDoc.getElementsByTagName('Size')[0];
+
+      const tileSize = parseInt(image.getAttribute('TileSize'));
+      const overlap = parseInt(image.getAttribute('Overlap'));
+      const format = image.getAttribute('Format');
+      const width = parseInt(size.getAttribute('Width'));
+      const height = parseInt(size.getAttribute('Height'));
+
+      console.log('📐 Image dimensions:', { width, height, tileSize, format });
+
+      // Return OpenSeadragon compatible tile source
+      return {
+        type: 'image',
+        url: `${IMG_CATALOG_BASE_URL}/proxy/${imageId}/image_files/{z}/{x}_{y}.${format}?session=${sessionId}`,
+        buildPyramid: false,
+        width: width,
+        height: height,
+        tileSize: tileSize,
+        tileOverlap: overlap,
+        minLevel: 0,
+        maxLevel: Math.ceil(Math.log2(Math.max(width, height) / tileSize))
+      };
+    } catch (error) {
+      console.error('❌ Failed to create optimized tile source:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * 📱 Performance monitoring ve debugging
+   */
+  async getPerformanceMetrics() {
+    try {
+      const stats = await this.getSessionStats();
+      return {
+        activeSessions: stats.active_sessions,
+        sessionAge: this.sessionExpiry ? Math.max(0, (this.sessionExpiry - Date.now()) / 1000) : 0,
+        sessionValid: this.imageSessionId && this.sessionExpiry && Date.now() < this.sessionExpiry,
+        totalRequests: stats.sessions.reduce((sum, s) => sum + (s.request_count || 0), 0),
+        currentSessionId: this.imageSessionId ? this.imageSessionId.substring(0, 8) + '...' : null
+      };
+    } catch (error) {
+      console.error('❌ Failed to get performance metrics:', error);
+      return {
+        error: 'Failed to fetch metrics',
+        sessionValid: false
+      };
+    }
+  }
+
+  /**
+   * 🧹 Cleanup - component unmount'ta çağırın
+   */
+  cleanup() {
+    this.revokeCurrentSession();
   }
 }
 
-const imageCatalogAPI = new ImageCatalogAPI(imageCatalogClient);
+// Singleton instance
+const imageCatalogAPI = new ImageCatalogAPI();
 
 export default imageCatalogAPI;
