@@ -1,8 +1,11 @@
+// src/api/auth.js
 import axios from 'axios'
-const API_AUTH_BASE_URL = import.meta.env.VITE_AUTH_API_BASE_URL || 'http://localhost:8000/api/v1'
+
+// Fix: Use VITE_BACKEND_URL instead of BACKEND_URL
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000/api/v1'
 
 const authClient = axios.create({
-  baseURL: API_AUTH_BASE_URL,
+  baseURL: BACKEND_URL, // https://auth-service.../api/v1
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',
@@ -16,6 +19,7 @@ authClient.interceptors.request.use(
     if (token) {
       config.headers.Authorization = `Bearer ${token}`
     }
+    console.log('Auth request to:', config.baseURL + config.url); // Debug logging
     return config
   },
   (error) => {
@@ -47,22 +51,23 @@ class UserAPI {
   constructor(client) {
     this.client = client
   }
+
   register(payload) {
     return this.client.post('/auth/register', payload)
   }
-  // Backend'deki POST /auth/verify rotasına uyumlu
+
   verifyToken(token) {
     return this.client.post('/auth/verify', { token })
   }
-  // Backend'deki GET /user/profile rotasına uyumlu
+
   getProfile() {
     return this.client.get('/user/profile')
   }
-  // Backend'deki PUT /user/password rotasına uyumlu (ChangePasswordSelf)
+
   changePassword(payload) {
     return this.client.put('/user/password', payload)
   }
-  // Backend'deki DELETE /user/account rotasına uyumlu
+
   deleteAccount() {
     return this.client.delete('/user/account')
   }
@@ -72,25 +77,27 @@ class AdminAPI {
   constructor(client) {
     this.client = client
   }
-  // Backend'deki GET /admin/users/ rotasına (sondaki eğik çizgi ile) uyumlu
+
   getAllUsers() {
     return this.client.get('/admin/users/')
   }
+
   getUser(uid) {
     return this.client.get(`/admin/users/${uid}`)
   }
-  approveUser(uid) {
-    return this.client.post(`/admin/users/${uid}/approve`, { role: 'user' })
+
+  approveUser(uid, payload = { role: 'user' }) {
+    return this.client.post(`/admin/users/${uid}/approve`, payload)
   }
+
   suspendUser(uid) {
     return this.client.post(`/admin/users/${uid}/suspend`)
   }
 
-  // Admin tarafında belirli bir kullanıcının şifresini değiştirmek için (YENİ EKLEME)
-  // Backend'deki PUT /admin/users/:uid/password rotasına uyumlu olacak.
   changeUserPassword(uid, payload) {
     return this.client.put(`/admin/users/${uid}/password`, payload)
   }
+
   makeAdmin(uid) {
     return this.client.post(`/admin/users/${uid}/promote`)
   }
@@ -103,6 +110,7 @@ class AuthAPI {
     this.admin = new AdminAPI(client)
   }
 }
+
 const authAPI = new AuthAPI(authClient)
 
 export default authAPI
