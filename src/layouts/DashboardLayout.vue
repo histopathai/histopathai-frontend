@@ -3,7 +3,6 @@
     <nav class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
-          <!-- Sol - Uygulama Adı -->
           <div class="flex items-center">
             <router-link to="/dashboard" class="text-xl font-semibold text-gray-900">
               {{ appName }}
@@ -16,14 +15,13 @@
             </router-link>
           </div>
 
-          <!-- Sağ - Admin Link + Kullanıcı Menüsü -->
           <div class="flex items-center space-x-4">
             <router-link
               v-if="authStore.isAdmin"
               to="/admin"
               class="text-primary-600 hover:text-primary-800 text-sm font-medium"
             >
-              Admin Paneli
+              Admin Panel
             </router-link>
 
             <div class="relative">
@@ -39,11 +37,10 @@
                   </span>
                 </div>
                 <span class="text-gray-700">
-                  {{ authStore.user?.displayName || authStore.user?.email || 'Kullanıcı' }}
+                  {{ authStore.user?.displayName || authStore.user?.email || 'User' }}
                 </span>
               </button>
 
-              <!-- Dropdown Menü -->
               <div
                 v-if="showUserMenu"
                 class="user-dropdown absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-50"
@@ -53,14 +50,14 @@
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   @click="showUserMenu = false"
                 >
-                  Profil
+                  Profile
                 </router-link>
                 <div class="border-t border-gray-100"></div>
                 <button
                   @click="handleLogout"
                   class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Çıkış Yap
+                  Logout
                 </button>
               </div>
             </div>
@@ -69,9 +66,7 @@
       </div>
     </nav>
 
-    <!-- Ana içerik -->
     <main class="w-full h-full flex flex-col">
-      <!-- Hesap onay bekliyorsa uyarı -->
       <div
         v-if="authStore.user?.status === 'pending'"
         class="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4"
@@ -92,14 +87,13 @@
             </svg>
           </div>
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">Hesabınız Onay Bekliyor</h3>
+            <h3 class="text-sm font-medium text-yellow-800">Your Account is Pending Approval</h3>
             <p class="mt-1 text-sm text-yellow-700">
-              Hesabınız yönetici onayı beklemektedir. Bazı özellikler sınırlı olabilir.
+              Your account is awaiting administrator approval. Some features may be limited.
             </p>
           </div>
         </div>
       </div>
-      <!-- Router View: Sayfa içerikleri burada yüklenecek -->
       <router-view />
     </main>
   </div>
@@ -120,13 +114,12 @@ const showUserMenu = ref(false)
 
 const toggleUserMenu = () => {
   showUserMenu.value = !showUserMenu.value
-  console.log('Menu toggled:', showUserMenu.value)
 }
 
 const handleLogout = () => {
   showUserMenu.value = false
   authStore.logout()
-  toast.success('Başarıyla çıkış yapıldı.')
+  toast.success('Successfully logged out.')
   router.push('/auth/login')
 }
 
@@ -142,7 +135,7 @@ const handleClickOutside = (event) => {
   }
 }
 
-// Event listener ekleme/kaldırma
+// Add/remove event listener
 onMounted(() => {
   document.addEventListener('click', handleClickOutside)
 })
@@ -153,5 +146,5 @@ onUnmounted(() => {
 </script>
 
 <style scoped>
-/* DashboardLayout'a özel stiller buraya eklenebilir */
+/* DashboardLayout specific styles can be added here */
 </style>
