@@ -27,7 +27,7 @@
       <!-- Top Toolbar -->
       <div class="toolbar">
         <div class="toolbar-left">
-          <span class="toolbar-title">🚀 Ultra-Fast Session System</span>
+          <span class="toolbar-title">HistopathAI </span>
           <div v-if="selectedImage" class="toolbar-info">
             Loading: {{ selectedImage.file_name }}
           </div>
@@ -41,6 +41,31 @@
           >
             🔄
           </button>
+        </div>
+      </div>
+
+      <!-- Annotation Tools -->
+      <div id="annotation-tools">
+        <label>Organ: <textarea  rows="1" /></label>
+        <label>Diagnosis: <textarea  rows="1" /></label>
+        <label>Grade: <textarea  rows="1" /></label>
+
+          <!-- Navigation -->
+        <div class="navigation-box">
+          <div class="prev-next-column">
+            <button>
+              <img src="../../../assets/css/viewer-assets/save.svg" alt="Kaydet" width="22" height="22" />
+              <span>Kaydet</span>
+            </button>
+            <button>
+              <img src="../../../assets/css/viewer-assets/previous.svg" alt="Önceki" width="22" height="22" />
+              <span>Önceki</span>
+            </button>
+            <button>
+              <img src="../../../assets/css/viewer-assets/next.svg" alt="Sonraki" width="22" height="22" />
+              <span>Sonraki</span>
+            </button>
+          </div>
         </div>
       </div>
 
@@ -554,5 +579,91 @@ export default {
 
 .animate-pulse {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+/* Annotation Tools */
+#annotation-tools {
+  padding: 8px 12px;
+  min-height: unset;
+  display: flex;
+  justify-content: flex-start;
+  align-items: flex-start;
+  gap: 16px;
+  margin-bottom: 8px;
+}
+
+#annotation-tools label {
+  margin: 0 0 5px 0;
+  color: #aaa;
+  font-size: 14px;
+  text-align: left;
+}
+
+#annotation-tools textarea {
+  width: 100%;
+  min-height: 50px;
+  resize: none;
+  padding: 8px;
+  background-color: #ffffff;
+  color: #000000;
+  border: 1px solid #444;
+  border-radius: 4px;
+  box-sizing: border-box;
+  font-family: inherit;
+  font-size: 14px;
+  line-height: 1.5;
+  word-wrap: break-word;
+}
+
+/* Navigation Box */
+.navigation-box {
+  border: 1px solid #fffefe;
+  border-radius: 8px;
+  padding: 10px;
+  background-color: #ffffff;
+  width: auto;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.navigation-box h4 {
+  margin: 0 0 5px 0;
+  color: white;
+  font-weight: bold;
+  border-bottom: 1px solid #555;
+  padding-bottom: 4px;
+}
+
+.navigation-box button {
+  padding: 8px 12px;
+  background-color: #ffffff;
+  color: rgb(0, 0, 0);
+  border: 1px solid #666;
+  border-radius: 5px;
+  padding: 6px 10px;
+  cursor: pointer;
+  font-size: 18px;
+  font-weight: 300;
+  min-width: 50px;
+  height: 40px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+}
+
+.navigation-box button:hover {
+  background-color: #3e8dcf;
+  transform: translateY(-2px);
+  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
+}
+
+.navigation-box button:active {
+  transform: scale(0.98);
 }
 </style>
