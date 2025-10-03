@@ -1,159 +1,42 @@
 <template>
-  <div class="flex h-screen bg-gray-50">
+  <div class="viewer-container">
     <!-- Performance Stats (Development only) -->
-    <div v-if="showPerformanceStats" class="absolute top-4 right-4 z-50 bg-black bg-opacity-80 text-white p-3 rounded text-xs">
+    <div v-if="showPerformanceStats" class="performance-stats">
       <div>Session: {{ performanceMetrics.currentSessionId || 'None' }}</div>
       <div>Valid: {{ performanceMetrics.sessionValid ? '✅' : '❌' }}</div>
       <div>Age: {{ Math.round(performanceMetrics.sessionAge) }}s</div>
       <div>Requests: {{ performanceMetrics.totalRequests }}</div>
-      <button @click="showPerformanceStats = false" class="text-red-400 mt-1">×</button>
+      <button @click="showPerformanceStats = false" class="close-stats">×</button>
     </div>
 
-    <!-- Sidebar -->
-    <div class="w-80 bg-white border-r border-gray-200 flex flex-col">
-      <!-- Header with Performance Toggle -->
-      <div class="p-4 border-b border-gray-200">
-        <div class="flex justify-between items-center">
-          <div>
-            <h2 class="text-lg font-semibold text-gray-800">Image Catalog</h2>
-            <p class="text-sm text-gray-600">Session System</p>
-          </div>
-          <button
-            @click="togglePerformanceStats"
-            class="text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded"
-            title="Toggle performance stats"
-          >
-            📊
-          </button>
-        </div>
-      </div>
-
-      <!-- Search -->
-      <div class="p-4 border-b border-gray-200">
-        <div class="relative">
-          <input
-            v-model="searchQuery"
-            type="text"
-            placeholder="Search images..."
-            class="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-          <svg class="absolute left-3 top-2.5 h-5 w-5 text-gray-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-          </svg>
-        </div>
-      </div>
-
-      <!-- Dataset Tree -->
-      <div class="flex-1 overflow-y-auto">
-        <div class="p-4 space-y-2">
-          <div v-if="loading" class="text-center py-8">
-            <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto"></div>
-            <p class="mt-2 text-sm text-gray-600">Loading images...</p>
-          </div>
-
-          <div v-else-if="error" class="text-center py-8 text-red-600">
-            <p>{{ error }}</p>
-            <button @click="loadImages" class="mt-2 px-4 py-2 bg-blue-500 text-white rounded hover:bg-blue-600">
-              Retry
-            </button>
-          </div>
-
-          <div v-else>
-            <div v-for="(images, datasetName) in filteredGroupedImages" :key="datasetName" class="mb-4">
-              <!-- Dataset Header -->
-              <div
-                @click="toggleDataset(datasetName)"
-                class="flex items-center justify-between p-3 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200 transition-colors"
-              >
-                <div class="flex items-center space-x-2">
-                  <svg
-                    :class="[
-                      'h-4 w-4 text-gray-600 transition-transform',
-                      expandedDatasets.includes(datasetName) ? 'transform rotate-90' : ''
-                    ]"
-                    fill="none"
-                    stroke="currentColor"
-                    viewBox="0 0 24 24"
-                  >
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
-                  </svg>
-                  <span class="font-medium text-gray-800">{{ datasetName }}</span>
-                </div>
-                <span class="text-sm text-gray-500 bg-gray-300 px-2 py-1 rounded-full">
-                  {{ images.length }}
-                </span>
-              </div>
-
-              <!-- Images List -->
-              <div v-if="expandedDatasets.includes(datasetName)" class="mt-2 ml-4 space-y-1">
-                <div
-                  v-for="image in images"
-                  :key="image.id"
-                  @click="selectImage(image)"
-                  :class="[
-                    'flex items-center p-3 rounded-lg cursor-pointer transition-colors',
-                    selectedImage?.id === image.id
-                      ? 'bg-blue-100 border border-blue-300'
-                      : 'hover:bg-gray-50 border border-transparent'
-                  ]"
-                >
-                  <!-- Thumbnail -->
-                  <div class="flex-shrink-0 w-12 h-12 bg-gray-200 rounded-lg overflow-hidden">
-                    <img
-                      :src="getThumbnailUrl(image.id)"
-                      :alt="image.file_name || image.id"
-                      class="w-full h-full object-cover"
-                      @error="handleImageError"
-                      loading="lazy"
-                      :data-image-id="image.id"
-                    >
-                  </div>
-
-                  <!-- Image Info -->
-                  <div class="ml-3 flex-1 min-w-0">
-                    <p class="text-sm font-medium text-gray-900 truncate">
-                      {{ image.file_name || image.id }}
-                    </p>
-                    <p class="text-xs text-gray-500 truncate">
-                      {{ image.organ_type || 'Unknown' }}
-                    </p>
-                    <p class="text-xs text-gray-400">
-                      ID: {{ image.id.substring(0, 8) }}...
-                    </p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Selected Image Info -->
-      <div v-if="selectedImage" class="p-4 border-t border-gray-200 bg-gray-50">
-        <h3 class="text-sm font-medium text-gray-800 mb-2">Selected Image</h3>
-        <div class="text-xs text-gray-600 space-y-1">
-          <p><span class="font-medium">Name:</span> {{ selectedImage.file_name || 'N/A' }}</p>
-          <p><span class="font-medium">Dataset:</span> {{ selectedImage.dataset_name }}</p>
-          <p><span class="font-medium">Organ:</span> {{ selectedImage.organ_type || 'N/A' }}</p>
-        </div>
-      </div>
-    </div>
+    <!-- Sidebar Component -->
+    <Sidebar
+      :images="images"
+      :selected-image="selectedImage"
+      :search-query="searchQuery"
+      :loading="loading"
+      :error="error"
+      @select-image="selectImage"
+      @reload-images="loadImages"
+      @toggle-performance-stats="togglePerformanceStats"
+      @update:search-query="searchQuery = $event"
+    />
 
     <!-- Main Viewer Area -->
-    <div class="flex-1 flex flex-col">
+    <div class="main-viewer">
       <!-- Top Toolbar -->
-      <div class="h-12 bg-white border-b border-gray-200 flex items-center px-4 justify-between">
-        <div class="flex items-center space-x-4">
-          <span class="text-sm text-gray-600">🚀 Ultra-Fast Session System</span>
-          <div v-if="selectedImage" class="text-xs text-gray-500">
+      <div class="toolbar">
+        <div class="toolbar-left">
+          <span class="toolbar-title">🚀 Ultra-Fast Session System</span>
+          <div v-if="selectedImage" class="toolbar-info">
             Loading: {{ selectedImage.file_name }}
           </div>
         </div>
-        <div class="flex items-center space-x-2 text-xs text-gray-500">
+        <div class="toolbar-right">
           <span>Session: {{ sessionStatus }}</span>
           <button
             @click="refreshSession"
-            class="ml-2 text-xs bg-blue-100 text-blue-600 px-2 py-1 rounded hover:bg-blue-200"
+            class="refresh-btn"
             title="Refresh session"
           >
             🔄
@@ -162,32 +45,32 @@
       </div>
 
       <!-- Viewer Container -->
-      <div class="flex-1 relative">
-        <div v-if="!selectedImage" class="flex items-center justify-center h-full text-gray-500">
-          <div class="text-center">
-            <svg class="mx-auto h-16 w-16 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div class="viewer-wrapper">
+        <div v-if="!selectedImage" class="empty-state">
+          <div class="empty-content">
+            <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path>
             </svg>
-            <h3 class="mt-4 text-lg font-medium">Select an image to view</h3>
-            <p class="mt-2 text-sm text-gray-400">Choose an image from the sidebar to start viewing</p>
+            <h3 class="empty-title">Select an image to view</h3>
+            <p class="empty-subtitle">Choose an image from the sidebar to start viewing</p>
           </div>
         </div>
 
         <div
           v-else
           ref="viewerContainer"
-          class="w-full h-full bg-black"
-          :class="{ 'opacity-50': viewerLoading }"
+          class="osd-container"
+          :class="{ 'loading': viewerLoading }"
         >
           <!-- OpenSeadragon will mount here -->
         </div>
 
         <!-- Loading overlay for viewer -->
-        <div v-if="viewerLoading" class="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50">
-          <div class="text-center text-white">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-white mx-auto"></div>
-            <p class="mt-4 text-lg">Loading tiles...</p>
-            <p class="text-sm opacity-75">{{ loadingProgress }}</p>
+        <div v-if="viewerLoading" class="loading-overlay">
+          <div class="loading-content">
+            <div class="spinner-large"></div>
+            <p class="loading-title">Loading tiles...</p>
+            <p class="loading-progress">{{ loadingProgress }}</p>
           </div>
         </div>
       </div>
@@ -196,17 +79,19 @@
 </template>
 
 <script>
-import { ref, onMounted, computed, nextTick, onUnmounted } from 'vue'
+import { ref, onMounted, nextTick, onUnmounted } from 'vue'
 import OpenSeadragon from 'openseadragon'
-import ImageCatalogAPI from '@/api/image_catalog.js' // 🚀 API import
+import ImageCatalogAPI from '@/api/image_catalog.js'
+import ViewerSidebar from './Sidebar.vue'
 
 export default {
   name: 'ImageViewer',
+  components: {
+    Sidebar: ViewerSidebar
+  },
   setup() {
-    // Reactive data
     const images = ref([])
     const selectedImage = ref(null)
-    const expandedDatasets = ref([])
     const searchQuery = ref('')
     const loading = ref(false)
     const error = ref(null)
@@ -216,87 +101,27 @@ export default {
     const showPerformanceStats = ref(false)
     const performanceMetrics = ref({})
 
-    // Refs
     const viewerContainer = ref(null)
     let viewer = null
 
-    // Cache for thumbnails
-    const thumbnailCache = {}
 
-    // Computed
-    const groupedImages = computed(() => {
-      if (!Array.isArray(images.value)) {
-        console.warn('images.value is not an array:', images.value)
-        return {}
-      }
 
-      const groups = {}
-      images.value.forEach(image => {
-        const dataset = image.dataset_name || 'Unknown'
-        if (!groups[dataset]) {
-          groups[dataset] = []
-        }
-        groups[dataset].push(image)
-      })
-
-      Object.keys(groups).forEach(dataset => {
-        groups[dataset].sort((a, b) =>
-          (a.file_name || a.id).localeCompare(b.file_name || b.id)
-        )
-      })
-
-      return groups
-    })
-
-    const filteredGroupedImages = computed(() => {
-      if (!searchQuery.value.trim()) {
-        return groupedImages.value
-      }
-
-      const filtered = {}
-      const query = searchQuery.value.toLowerCase()
-
-      Object.keys(groupedImages.value).forEach(dataset => {
-        const filteredImages = groupedImages.value[dataset].filter(image =>
-          (image.file_name || '').toLowerCase().includes(query) ||
-          (image.id || '').toLowerCase().includes(query) ||
-          (image.organ_type || '').toLowerCase().includes(query) ||
-          dataset.toLowerCase().includes(query)
-        )
-
-        if (filteredImages.length > 0) {
-          filtered[dataset] = filteredImages
-        }
-      })
-
-      return filtered
-    })
-
-    // 🚀 Functions
     const loadImages = async () => {
       try {
         loading.value = true
         error.value = null
 
-        console.log('🔍 Loading images with API...')
-
-        // 1. Öncelikle geçerli bir session olduğundan emin ol
         await ImageCatalogAPI.getValidSessionId()
 
-        // 2. Görüntüleri getir - getImages fonksiyonu içinde session otomatik olarak eklenecek
         const response = await ImageCatalogAPI.getImages()
 
-        // 3. Yanıtı işle - yanıt yapısını kontrol et
         let imageList = []
 
         if (response.data && response.data.images && Array.isArray(response.data.images)) {
           imageList = response.data.images
-          console.log('✅ Using response.data.images:', imageList.length, 'images')
         } else if (Array.isArray(response.data)) {
           imageList = response.data
-          console.log('✅ Using response.data directly:', imageList.length, 'images')
         } else if (response.data && response.data.message) {
-          console.log('ℹ️ No images found:', response.data.message)
           imageList = []
         } else {
           console.error('❌ Unexpected response structure:', response.data)
@@ -304,27 +129,15 @@ export default {
         }
 
         images.value = imageList
-        console.log('🔍 Final images array:', images.value.length, 'images')
 
-        // Auto-expand first dataset
-        if (images.value.length > 0 && expandedDatasets.value.length === 0) {
-          const firstDataset = Object.keys(groupedImages.value)[0]
-          if (firstDataset) {
-            expandedDatasets.value.push(firstDataset)
-          }
-        }
-
-        // Update session status
         await updateSessionStatus()
 
       } catch (err) {
         console.error('❌ Error loading images:', err)
 
-        // Hata mesajını detaylı analiz et
         let errorMessage = 'Failed to load images'
 
         if (err.response) {
-          // Sunucu yanıtı varsa
           const status = err.response.status
           errorMessage = `Server error (${status})`
 
@@ -334,7 +147,6 @@ export default {
             errorMessage = 'Internal server error. Please try refreshing your session.'
           } else if (status === 401) {
             errorMessage = 'Authentication error. Please log in again.'
-            // Session yenileme dene
             try {
               await ImageCatalogAPI.createImageSession()
               errorMessage += ' (Trying to create a new session...)'
@@ -343,7 +155,6 @@ export default {
             }
           }
         } else if (err.request) {
-          // İstek yapıldı ama yanıt alınamadı
           errorMessage = 'No response from server. Please check your connection.'
         }
 
@@ -370,7 +181,6 @@ export default {
         sessionStatus.value = 'Refreshing...'
         await ImageCatalogAPI.createImageSession()
         await updateSessionStatus()
-        console.log('🔄 Session refreshed manually')
       } catch (error) {
         console.error('❌ Failed to refresh session:', error)
         sessionStatus.value = 'Error'
@@ -400,11 +210,9 @@ export default {
       loadingProgress.value = 'Initializing session...'
 
       try {
-        // Session'ı yenile/oluştur
         const sessionId = await ImageCatalogAPI.getValidSessionId()
         loadingProgress.value = `Setting up viewer with session: ${sessionId.substring(0, 8)}...`
 
-        // Initialize OpenSeadragon if not already done
         if (!viewer) {
           loadingProgress.value = 'Setting up viewer...'
           await nextTick()
@@ -432,16 +240,14 @@ export default {
             autoHideControls: false,
             immediateRender: false,
             preserveImageSizeOnResize: true,
-            // 🚀 Optimizations for performance
             preload: true,
-            maxImageCacheCount: 200, // Cache more tiles
-            timeout: 120000, // 2 minute timeout
+            maxImageCacheCount: 200,
+            timeout: 120000,
           })
 
           viewer.addHandler('open', () => {
             viewerLoading.value = false
             loadingProgress.value = ''
-            console.log('✅ Image opened successfully with API session')
             updateSessionStatus()
           })
 
@@ -456,17 +262,14 @@ export default {
             loadingProgress.value = 'Loading tiles...'
           })
 
-          // Hata işleme için yeni olay işleyicisi
           viewer.addHandler('tile-load-failed', (event) => {
             console.error('❌ Tile load failed:', event)
             loadingProgress.value = 'Error loading tiles. Retrying...'
           })
         }
 
-        // 🚀 Get DZI URL with session
         loadingProgress.value = 'Creating session...'
         const dziUrl = await ImageCatalogAPI.getDZIUrl(image.id)
-        console.log('🎯 Loading DZI from:', dziUrl)
 
         loadingProgress.value = 'Loading image data...'
         viewer.open(dziUrl)
@@ -476,7 +279,6 @@ export default {
         loadingProgress.value = ''
         console.error('❌ Error loading image in viewer:', err)
 
-        // Hata detaylarını analiz et
         let errorMessage = 'Error loading image. Please try again.'
 
         if (err.response && err.response.status) {
@@ -487,11 +289,10 @@ export default {
           } else if (err.response.status === 401) {
             errorMessage = 'Session expired. Creating new session...'
 
-            // Session'ı yenilemeyi dene
             try {
               await ImageCatalogAPI.createImageSession()
-              setTimeout(() => loadImageInViewer(image), 1000) // 1 saniye sonra tekrar dene
-              return // Fonksiyondan çık, tekrar deneyecek
+              setTimeout(() => loadImageInViewer(image), 1000)
+              return
             } catch (sessionErr) {
               errorMessage = 'Failed to create new session. Please refresh the page.'
             }
@@ -502,62 +303,15 @@ export default {
       }
     }
 
-    const getThumbnailUrl = (imageId) => {
-      // Önbellekte varsa hemen döndür
-      if (thumbnailCache[imageId]) {
-        return thumbnailCache[imageId]
-      }
-
-      // Geçici placeholder döndür
-      const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMzMC42Mjc0IDMyIDM2IDE5LjI1NDggMzYgM0MzNiAxMy4yNTQ4IDMwLjYyNzQgMjIgMjQgMjJDMTcuMzcyNiAyMiAxMiAxMy4yNTQ4IDEyIDNDMTIgMTkuMjU0OCAxNy4zNzI2IDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-
-      // Asenkron olarak gerçek URL'yi yükle
-      ImageCatalogAPI.getThumbnailUrl(imageId)
-        .then(url => {
-          // Önbelleğe ekle
-          thumbnailCache[imageId] = url
-
-          // Tüm bu ID'ye sahip img elementlerini güncelle
-          document.querySelectorAll(`img[data-image-id="${imageId}"]`).forEach(img => {
-            if (img.src.startsWith('data:')) { // Sadece placeholder'ları güncelle
-              img.src = url
-            }
-          })
-        })
-        .catch(err => {
-          console.error('Failed to load thumbnail:', err)
-        })
-
-      return placeholder
-    }
-
-    const toggleDataset = (datasetName) => {
-      const index = expandedDatasets.value.indexOf(datasetName)
-      if (index > -1) {
-        expandedDatasets.value.splice(index, 1)
-      } else {
-        expandedDatasets.value.push(datasetName)
-      }
-    }
-
-    const handleImageError = (event) => {
-      // Replace failed thumbnail with a placeholder
-      event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMzMC42Mjc0IDMyIDM2IDE5LjI1NDggMzYgM0MzNiAxMy4yNTQ4IDMwLjYyNzQgMjIgMjQgMjJDMTcuMzcyNiAyMiAxMiAxMy4yNTQ4IDEyIDNDMTIgMTkuMjU0OCAxNy4zNzI2IDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-    }
-
-    // Cleanup function
     const cleanup = () => {
       if (viewer) {
         viewer.destroy()
         viewer = null
       }
-      // Cleanup API
       ImageCatalogAPI.cleanup()
     }
 
-    // Lifecycle
     onMounted(() => {
-      console.log('🚀 ImageViewer mounted - Enterprise Session System')
       loadImages()
     })
 
@@ -565,7 +319,6 @@ export default {
       cleanup()
     })
 
-    // Auto-update performance metrics every 30 seconds
     let metricsInterval
     onMounted(() => {
       metricsInterval = setInterval(async () => {
@@ -582,10 +335,8 @@ export default {
     })
 
     return {
-      // Data
       images,
       selectedImage,
-      expandedDatasets,
       searchQuery,
       loading,
       error,
@@ -594,23 +345,12 @@ export default {
       sessionStatus,
       showPerformanceStats,
       performanceMetrics,
-
-      // Refs
       viewerContainer,
-
-      // Computed
-      groupedImages,
-      filteredGroupedImages,
-
-      // Methods
       loadImages,
       updateSessionStatus,
       refreshSession,
       togglePerformanceStats,
-      toggleDataset,
       selectImage,
-      getThumbnailUrl,
-      handleImageError,
       cleanup
     }
   },
@@ -622,42 +362,194 @@ export default {
 </script>
 
 <style scoped>
-/* Performance stats styling */
-.absolute {
+/* Main Container */
+.viewer-container {
+  display: flex;
+  height: 100vh;
+  background-color: #f9fafb;
+}
+
+/* Performance Stats */
+.performance-stats {
+  position: absolute;
+  top: 1rem;
+  right: 1rem;
   z-index: 9999;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 0.75rem;
+  border-radius: 0.375rem;
+  font-size: 0.75rem;
+  line-height: 1rem;
 }
 
-/* scrollbar */
-.overflow-y-auto::-webkit-scrollbar {
-  width: 6px;
+.close-stats {
+  color: #f87171;
+  margin-top: 0.25rem;
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 1.25rem;
 }
 
-.overflow-y-auto::-webkit-scrollbar-track {
-  background: #f1f1f1;
+/* Main Viewer */
+.main-viewer {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 3px;
+/* Toolbar */
+.toolbar {
+  height: 3rem;
+  background-color: white;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  align-items: center;
+  padding: 0 1rem;
+  justify-content: space-between;
 }
 
-.overflow-y-auto::-webkit-scrollbar-thumb:hover {
-  background: #a1a1a1;
+.toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
 }
 
-/* Custom transitions */
-.transition-colors {
-  transition: background-color 0.2s ease, border-color 0.2s ease;
+.toolbar-title {
+  font-size: 0.875rem;
+  color: #4b5563;
+  line-height: 1.25rem;
 }
 
-.transition-transform {
-  transition: transform 0.2s ease;
+.toolbar-info {
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1rem;
 }
 
-/* Loading animations */
+.toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #6b7280;
+  line-height: 1rem;
+}
+
+.refresh-btn {
+  margin-left: 0.5rem;
+  font-size: 0.75rem;
+  background-color: #dbeafe;
+  color: #2563eb;
+  padding: 0.25rem 0.5rem;
+  border-radius: 0.375rem;
+  border: none;
+  cursor: pointer;
+  line-height: 1rem;
+}
+
+.refresh-btn:hover {
+  background-color: #bfdbfe;
+}
+
+/* Viewer Wrapper */
+.viewer-wrapper {
+  flex: 1;
+  position: relative;
+}
+
+/* Empty State */
+.empty-state {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: #6b7280;
+}
+
+.empty-content {
+  text-align: center;
+}
+
+.empty-icon {
+  margin: 0 auto;
+  height: 4rem;
+  width: 4rem;
+  color: #d1d5db;
+}
+
+.empty-title {
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  font-weight: 500;
+  line-height: 1.75rem;
+}
+
+.empty-subtitle {
+  margin-top: 0.5rem;
+  font-size: 0.875rem;
+  color: #9ca3af;
+  line-height: 1.25rem;
+}
+
+/* OpenSeadragon Container */
+.osd-container {
+  width: 100%;
+  height: 100%;
+  background-color: black;
+}
+
+.osd-container.loading {
+  opacity: 0.5;
+}
+
+/* Loading Overlay */
+.loading-overlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: rgba(0, 0, 0, 0.5);
+}
+
+.loading-content {
+  text-align: center;
+  color: white;
+}
+
+.spinner-large {
+  animation: spin 1s linear infinite;
+  border-radius: 9999px;
+  height: 3rem;
+  width: 3rem;
+  border-width: 2px;
+  border-color: white;
+  border-bottom-color: transparent;
+  margin: 0 auto;
+}
+
+.loading-title {
+  margin-top: 1rem;
+  font-size: 1.125rem;
+  line-height: 1.75rem;
+}
+
+.loading-progress {
+  font-size: 0.875rem;
+  opacity: 0.75;
+  line-height: 1.25rem;
+}
+
+/* Loading Animation */
 @keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .animate-pulse {
