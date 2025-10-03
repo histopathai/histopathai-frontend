@@ -1,8 +1,8 @@
 // src/router/modules/user.js - Fixed
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
-import DashboardView from '@/views/user/DashboardView.vue'
-import ProfileView from '@/views/user/ProfileView.vue'
-import ImageViewer from '@/components/user/ImageViewer.vue'
+import DashboardView from '@/modules/user/views/DashboardView.vue'
+import ProfileView from '@/modules/user/views/ProfileView.vue'
+import ImageViewer from '@/modules/viewer/components/ImageViewer.vue'
 export default [
   {
     path: '/dashboard',
