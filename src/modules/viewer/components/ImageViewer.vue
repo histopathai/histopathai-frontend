@@ -44,30 +44,28 @@
         </div>
       </div>
 
-      <!-- Annotation Tools -->
-      <div id="annotation-tools">
-        <label>Organ: <textarea  rows="1" /></label>
-        <label>Diagnosis: <textarea  rows="1" /></label>
-        <label>Grade: <textarea  rows="1" /></label>
+      <!-- Annotations Tool -->
+      <AnnotationsTool
+        v-model:organ="annotationData.organ"
+        v-model:diagnosis="annotationData.diagnosis"
+        v-model:grade="annotationData.grade"
+        :active-tool="activeTool"
+        :brush-settings="brushSettings"
+        :is-viewer-ready="!!fabricOverlay"
+        :show-brush-settings="showBrushSettings"
+        :history-index="historyIndex"
+        :selected-deletable-object="selectedDeletableObject"
+        :labels="labels"
+        @update:brushSettings="brushSettings = $event"
+        @save="handleSave"
+        @previous="handlePrevious"
+        @next="handleNext"
+        @clear-tools="clearTools"
+        @set-brush-tool="setBrushTool"
+        @undo="undo"
+        @delete-selected="deleteSelected"
 
-          <!-- Navigation -->
-        <div class="navigation-box">
-          <div class="prev-next-column">
-            <button>
-              <img src="../../../assets/css/viewer-assets/save.svg" alt="Kaydet" width="22" height="22" />
-              <span>Kaydet</span>
-            </button>
-            <button>
-              <img src="../../../assets/css/viewer-assets/previous.svg" alt="Önceki" width="22" height="22" />
-              <span>Önceki</span>
-            </button>
-            <button>
-              <img src="../../../assets/css/viewer-assets/next.svg" alt="Sonraki" width="22" height="22" />
-              <span>Sonraki</span>
-            </button>
-          </div>
-        </div>
-      </div>
+      />
 
       <!-- Viewer Container -->
       <div class="viewer-wrapper">
@@ -100,19 +98,26 @@
         </div>
       </div>
     </div>
+    <ViewerNotification v-if="notification" :message="notification.message" :success="notification.success" />
   </div>
 </template>
 
 <script>
-import { ref, onMounted, nextTick, onUnmounted } from 'vue'
+import { ref, reactive, onMounted, nextTick, onUnmounted } from 'vue'
 import OpenSeadragon from 'openseadragon'
+import { fabric, initFabricJSOverlay } from '@adamjarling/openseadragon-fabricjs-overlay';
 import ImageCatalogAPI from '@/api/image_catalog.js'
 import ViewerSidebar from './Sidebar.vue'
+import AnnotationsTool from './AnnotationsTool.vue'
+// import ViewerNotification from './Notification.vue'
+
+initFabricJSOverlay(OpenSeadragon, fabric);
 
 export default {
   name: 'ImageViewer',
   components: {
-    Sidebar: ViewerSidebar
+    Sidebar: ViewerSidebar,
+    AnnotationsTool
   },
   setup() {
     const images = ref([])
@@ -125,9 +130,216 @@ export default {
     const sessionStatus = ref('Not created')
     const showPerformanceStats = ref(false)
     const performanceMetrics = ref({})
+    const notification = ref(null)
+    const activeTool = ref(null)
+    const showBrushSettings = ref(false)
+    const brushSettings = ref({
+      brushsize: 10,
+      color: '#ff0000',
+      opacity: 0.5
+    })
+    const labels = ref([])
+    const history = ref([])
+    let historyIndex = -1
+    const selectedDeletableObject = ref(null)
+    const fabricOverlay = ref(null)
 
     const viewerContainer = ref(null)
     let viewer = null
+
+    const annotationData = reactive({
+      organ: '',
+      diagnosis: '',
+      grade: ''
+    })
+
+    const clearTools = () => {
+      activeTool.value = null;
+      showBrushSettings.value = false;
+      const canvas = fabricOverlay.value?.fabricCanvas();
+      if (canvas) {
+        canvas.isDrawingMode = false;
+        canvas.selection = false;
+        canvas.off('mouse:down');
+        canvas.off('mouse:move');
+        canvas.off('mouse:up');
+        canvas.off('path:created');
+      }
+      viewer.value.setMouseNavEnabled(true);
+    }
+
+    const deactivateTools = () => {
+      if (!fabricOverlay.value) return;
+      const canvas = fabricOverlay.value.fabricCanvas();
+      canvas.isDrawingMode = false;
+      canvas.selection = false;
+      canvas.off('mouse:down');
+      canvas.off('mouse:move');
+      canvas.off('mouse:up');
+      canvas.off('path:created');
+      canvas.getObjects().forEach(obj => {
+        if (obj.customType !== 'labelText') {
+          obj.selectable = false;
+          obj.evented = false;
+        }
+        obj.hasControls = false;
+        obj.hasBorders = false;
+        if (obj.setCoords) obj.setCoords();
+      });
+      fabricOverlay.value.fabricCanvas().discardActiveObject();
+      fabricOverlay.value.fabricCanvas().renderAll();
+      viewer.value.setMouseNavEnabled(true);
+    }
+
+    const hexToRgbA = (hex, opacity) => { // yardımcı fonksiyon
+      let c;
+      if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
+        c = hex.substring(1).split('');
+        if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
+        c = '0x' + c.join('');
+        const r = (c >> 16) & 255;
+        const g = (c >> 8) & 255;
+        const b = c & 255;
+        return `rgba(${r},${g},${b},${opacity})`;
+      }
+      throw new Error('Bad Hex');
+    }
+
+    const promptLabel = (callback) => { //yardımcı fonksiyon
+      const label = prompt("Etiket girin:");
+      if (label && label.trim() !== "") {
+        callback(label.trim());
+      }
+    }
+
+    const addLabelText = (canvas, obj, label) => { //yardımcı fonksiyon
+      const zoom = canvas.getZoom() || 1;
+      const color = obj.stroke || obj.fill || 'rgba(0,0,0,0.5)';
+
+      const text = new fabric.Text(label, {
+        left: obj.left,
+        top: obj.top - 20,
+        fill: 'white',
+        fontSize: 24 / zoom,
+        backgroundColor: color,
+        selectable: false,
+        evented: false,
+        customType: 'labelText',
+        hasControls: false,
+        hasBorders: false
+      });
+      canvas.add(text);
+    }
+
+    const updateLabelsFromCanvas = (canvas) => { //yardımcı fonksiyon
+      const newLabels = [];
+      canvas.getObjects().forEach(obj => {
+        if (obj.label && obj.customType !== 'labelText') {
+          const color = obj.stroke || obj.fill || '#ccc';
+          const type = obj.type === 'path' ? 'brush' : 'bbox';
+          newLabels.push({ label: obj.label, color, type });
+        }
+      });
+      labels.value = newLabels;
+    }
+
+    const saveHistory = () => { //yardımcı fonksiyon
+      const canvas = fabricOverlay.value.fabricCanvas();
+      if (historyIndex < history.value.length - 1) {
+        history.value.splice(historyIndex + 1);
+      }
+      const json = canvas.toJSON(['label', 'customType']);
+      history.value.push(json);
+      historyIndex = history.value.length - 1;
+    }
+
+    const showNotification = (message, success = true) => { //yardımcı fonksiyon
+      notification.value = { message, success };
+      setTimeout(() => (notification.value = null), 1500);
+    }
+
+
+    const setBrushTool = () => {
+      if (!fabricOverlay.value) return showNotification("Görüntü henüz yüklenmedi", false);
+      deactivateTools();
+      activeTool.value = 'brush';
+      showBrushSettings.value = true;
+
+      const canvas = fabricOverlay.value.fabricCanvas();
+      const brush = new fabric.PencilBrush(canvas);
+      brush.width = brushSettings.value.brushsize;
+      brush.color = hexToRgbA(brushSettings.value.color, brushSettings.value.opacity);
+      canvas.freeDrawingBrush = brush;
+
+      canvas.isDrawingMode = true;
+      canvas.selection = false;
+
+      canvas.off('path:created');
+      canvas.on('path:created', (e) => {
+        const path = e.path;
+        promptLabel((label) => {
+          path.label = label;
+          addLabelText(canvas, path, label);
+          saveHistory();
+          updateLabelsFromCanvas(canvas);
+        });
+      });
+
+      viewer.value.setMouseNavEnabled(false);
+    }
+
+    const undo = () => {
+      const canvas = fabricOverlay.value.fabricCanvas();
+      if (historyIndex > 0) {
+        historyIndex--;
+        canvas.loadFromJSON(history.value[historyIndex], () => {
+          canvas.renderAll();
+          canvas.getObjects().forEach(obj => {
+            if (obj.label && obj.customType !== 'labelText') {
+              addLabelText(canvas, obj, obj.label);
+            }
+          });
+          updateLabelsFromCanvas(canvas);
+        });
+      }
+    }
+
+    const deleteSelected = () => {
+      const canvas = fabricOverlay.value.fabricCanvas();
+      const obj = selectedDeletableObject.value;
+
+      if (obj) {
+        // Bağlı label text'ini de kaldır
+        const labelText = canvas.getObjects().find(o =>
+          o.customType === 'labelText' && Math.abs(o.left - obj.left) < 5 && Math.abs(o.top - (obj.top - 20)) < 5
+        );
+
+        canvas.remove(obj);
+        if (labelText) canvas.remove(labelText);
+
+        selectedDeletableObject.value = null;
+        canvas.discardActiveObject();
+        canvas.renderAll();
+        saveHistory();
+        updateLabelsFromCanvas(canvas);
+      }
+    }
+
+
+    const handleSave = () => {
+      console.log('Kaydet butonuna tıklandı. Veriler:', annotationData)
+      // Burada kaydetme API çağrısı yapılabilir.
+    }
+
+    const handlePrevious = () => {
+      console.log('Önceki butonuna tıklandı.')
+      // Önceki resme gitme mantığı burada işlenecek.
+    }
+
+    const handleNext = () => {
+      console.log('Sonraki butonuna tıklandı.')
+      // Sonraki resme gitme mantığı burada işlenecek.
+    }
 
 
 
@@ -376,7 +588,18 @@ export default {
       refreshSession,
       togglePerformanceStats,
       selectImage,
-      cleanup
+      cleanup,
+      annotationData,
+      handleSave,
+      handlePrevious,
+      handleNext,
+      activeTool,
+      clearTools,
+      setBrushTool,
+      undo,
+      deleteSelected,
+      fabricOverlay,
+      showBrushSettings
     }
   },
 
@@ -581,89 +804,5 @@ export default {
   animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
-/* Annotation Tools */
-#annotation-tools {
-  padding: 8px 12px;
-  min-height: unset;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 8px;
-}
 
-#annotation-tools label {
-  margin: 0 0 5px 0;
-  color: #aaa;
-  font-size: 14px;
-  text-align: left;
-}
-
-#annotation-tools textarea {
-  width: 100%;
-  min-height: 50px;
-  resize: none;
-  padding: 8px;
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #444;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-  word-wrap: break-word;
-}
-
-/* Navigation Box */
-.navigation-box {
-  border: 1px solid #fffefe;
-  border-radius: 8px;
-  padding: 10px;
-  background-color: #ffffff;
-  width: auto;
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  margin-bottom: 10px;
-}
-
-.navigation-box h4 {
-  margin: 0 0 5px 0;
-  color: white;
-  font-weight: bold;
-  border-bottom: 1px solid #555;
-  padding-bottom: 4px;
-}
-
-.navigation-box button {
-  padding: 8px 12px;
-  background-color: #ffffff;
-  color: rgb(0, 0, 0);
-  border: 1px solid #666;
-  border-radius: 5px;
-  padding: 6px 10px;
-  cursor: pointer;
-  font-size: 18px;
-  font-weight: 300;
-  min-width: 50px;
-  height: 40px;
-  box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  transition: all 0.3s ease;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-}
-
-.navigation-box button:hover {
-  background-color: #3e8dcf;
-  transform: translateY(-2px);
-  box-shadow: 0 6px 16px rgba(0,0,0,0.25);
-}
-
-.navigation-box button:active {
-  transform: scale(0.98);
-}
 </style>
