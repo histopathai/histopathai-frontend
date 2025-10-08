@@ -49,22 +49,6 @@
         v-model:organ="annotationData.organ"
         v-model:diagnosis="annotationData.diagnosis"
         v-model:grade="annotationData.grade"
-        :active-tool="activeTool"
-        :brush-settings="brushSettings"
-        :is-viewer-ready="!!fabricOverlay"
-        :show-brush-settings="showBrushSettings"
-        :history-index="historyIndex"
-        :selected-deletable-object="selectedDeletableObject"
-        :labels="labels"
-        @update:brushSettings="brushSettings = $event"
-        @save="handleSave"
-        @previous="handlePrevious"
-        @next="handleNext"
-        @clear-tools="clearTools"
-        @set-brush-tool="setBrushTool"
-        @undo="undo"
-        @delete-selected="deleteSelected"
-
       />
 
       <!-- Viewer Container -->
@@ -98,7 +82,6 @@
         </div>
       </div>
     </div>
-    <ViewerNotification v-if="notification" :message="notification.message" :success="notification.success" />
   </div>
 </template>
 
@@ -109,7 +92,6 @@ import { fabric, initFabricJSOverlay } from '@adamjarling/openseadragon-fabricjs
 import ImageCatalogAPI from '@/api/image_catalog.js'
 import ViewerSidebar from './Sidebar.vue'
 import AnnotationsTool from './AnnotationsTool.vue'
-// import ViewerNotification from './Notification.vue'
 
 initFabricJSOverlay(OpenSeadragon, fabric);
 
@@ -130,19 +112,6 @@ export default {
     const sessionStatus = ref('Not created')
     const showPerformanceStats = ref(false)
     const performanceMetrics = ref({})
-    const notification = ref(null)
-    const activeTool = ref(null)
-    const showBrushSettings = ref(false)
-    const brushSettings = ref({
-      brushsize: 10,
-      color: '#ff0000',
-      opacity: 0.5
-    })
-    const labels = ref([])
-    const history = ref([])
-    let historyIndex = -1
-    const selectedDeletableObject = ref(null)
-    const fabricOverlay = ref(null)
 
     const viewerContainer = ref(null)
     let viewer = null
@@ -153,177 +122,6 @@ export default {
       grade: ''
     })
 
-    const clearTools = () => {
-      activeTool.value = null;
-      showBrushSettings.value = false;
-      const canvas = fabricOverlay.value?.fabricCanvas();
-      if (canvas) {
-        canvas.isDrawingMode = false;
-        canvas.selection = false;
-        canvas.off('mouse:down');
-        canvas.off('mouse:move');
-        canvas.off('mouse:up');
-        canvas.off('path:created');
-      }
-      viewer.value.setMouseNavEnabled(true);
-    }
-
-    const deactivateTools = () => {
-      if (!fabricOverlay.value) return;
-      const canvas = fabricOverlay.value.fabricCanvas();
-      canvas.isDrawingMode = false;
-      canvas.selection = false;
-      canvas.off('mouse:down');
-      canvas.off('mouse:move');
-      canvas.off('mouse:up');
-      canvas.off('path:created');
-      canvas.getObjects().forEach(obj => {
-        if (obj.customType !== 'labelText') {
-          obj.selectable = false;
-          obj.evented = false;
-        }
-        obj.hasControls = false;
-        obj.hasBorders = false;
-        if (obj.setCoords) obj.setCoords();
-      });
-      fabricOverlay.value.fabricCanvas().discardActiveObject();
-      fabricOverlay.value.fabricCanvas().renderAll();
-      viewer.value.setMouseNavEnabled(true);
-    }
-
-    const hexToRgbA = (hex, opacity) => { // yardımcı fonksiyon
-      let c;
-      if (/^#([A-Fa-f0-9]{3}){1,2}$/.test(hex)) {
-        c = hex.substring(1).split('');
-        if (c.length === 3) c = [c[0], c[0], c[1], c[1], c[2], c[2]];
-        c = '0x' + c.join('');
-        const r = (c >> 16) & 255;
-        const g = (c >> 8) & 255;
-        const b = c & 255;
-        return `rgba(${r},${g},${b},${opacity})`;
-      }
-      throw new Error('Bad Hex');
-    }
-
-    const promptLabel = (callback) => { //yardımcı fonksiyon
-      const label = prompt("Etiket girin:");
-      if (label && label.trim() !== "") {
-        callback(label.trim());
-      }
-    }
-
-    const addLabelText = (canvas, obj, label) => { //yardımcı fonksiyon
-      const zoom = canvas.getZoom() || 1;
-      const color = obj.stroke || obj.fill || 'rgba(0,0,0,0.5)';
-
-      const text = new fabric.Text(label, {
-        left: obj.left,
-        top: obj.top - 20,
-        fill: 'white',
-        fontSize: 24 / zoom,
-        backgroundColor: color,
-        selectable: false,
-        evented: false,
-        customType: 'labelText',
-        hasControls: false,
-        hasBorders: false
-      });
-      canvas.add(text);
-    }
-
-    const updateLabelsFromCanvas = (canvas) => { //yardımcı fonksiyon
-      const newLabels = [];
-      canvas.getObjects().forEach(obj => {
-        if (obj.label && obj.customType !== 'labelText') {
-          const color = obj.stroke || obj.fill || '#ccc';
-          const type = obj.type === 'path' ? 'brush' : 'bbox';
-          newLabels.push({ label: obj.label, color, type });
-        }
-      });
-      labels.value = newLabels;
-    }
-
-    const saveHistory = () => { //yardımcı fonksiyon
-      const canvas = fabricOverlay.value.fabricCanvas();
-      if (historyIndex < history.value.length - 1) {
-        history.value.splice(historyIndex + 1);
-      }
-      const json = canvas.toJSON(['label', 'customType']);
-      history.value.push(json);
-      historyIndex = history.value.length - 1;
-    }
-
-    const showNotification = (message, success = true) => { //yardımcı fonksiyon
-      notification.value = { message, success };
-      setTimeout(() => (notification.value = null), 1500);
-    }
-
-
-    const setBrushTool = () => {
-      if (!fabricOverlay.value) return showNotification("Görüntü henüz yüklenmedi", false);
-      deactivateTools();
-      activeTool.value = 'brush';
-      showBrushSettings.value = true;
-
-      const canvas = fabricOverlay.value.fabricCanvas();
-      const brush = new fabric.PencilBrush(canvas);
-      brush.width = brushSettings.value.brushsize;
-      brush.color = hexToRgbA(brushSettings.value.color, brushSettings.value.opacity);
-      canvas.freeDrawingBrush = brush;
-
-      canvas.isDrawingMode = true;
-      canvas.selection = false;
-
-      canvas.off('path:created');
-      canvas.on('path:created', (e) => {
-        const path = e.path;
-        promptLabel((label) => {
-          path.label = label;
-          addLabelText(canvas, path, label);
-          saveHistory();
-          updateLabelsFromCanvas(canvas);
-        });
-      });
-
-      viewer.value.setMouseNavEnabled(false);
-    }
-
-    const undo = () => {
-      const canvas = fabricOverlay.value.fabricCanvas();
-      if (historyIndex > 0) {
-        historyIndex--;
-        canvas.loadFromJSON(history.value[historyIndex], () => {
-          canvas.renderAll();
-          canvas.getObjects().forEach(obj => {
-            if (obj.label && obj.customType !== 'labelText') {
-              addLabelText(canvas, obj, obj.label);
-            }
-          });
-          updateLabelsFromCanvas(canvas);
-        });
-      }
-    }
-
-    const deleteSelected = () => {
-      const canvas = fabricOverlay.value.fabricCanvas();
-      const obj = selectedDeletableObject.value;
-
-      if (obj) {
-        // Bağlı label text'ini de kaldır
-        const labelText = canvas.getObjects().find(o =>
-          o.customType === 'labelText' && Math.abs(o.left - obj.left) < 5 && Math.abs(o.top - (obj.top - 20)) < 5
-        );
-
-        canvas.remove(obj);
-        if (labelText) canvas.remove(labelText);
-
-        selectedDeletableObject.value = null;
-        canvas.discardActiveObject();
-        canvas.renderAll();
-        saveHistory();
-        updateLabelsFromCanvas(canvas);
-      }
-    }
 
 
     const handleSave = () => {
@@ -593,13 +391,6 @@ export default {
       handleSave,
       handlePrevious,
       handleNext,
-      activeTool,
-      clearTools,
-      setBrushTool,
-      undo,
-      deleteSelected,
-      fabricOverlay,
-      showBrushSettings
     }
   },
 
