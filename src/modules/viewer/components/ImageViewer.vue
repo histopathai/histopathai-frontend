@@ -14,7 +14,8 @@
         <div class="toolbar-left">
           <span class="toolbar-title">HistopathAI</span>
           <div v-if="selectedImage" class="toolbar-info">
-            Loading: {{ selectedImage.file_name }}
+            File Name: {{ selectedImage.file_name }}
+            ID: {{ selectedImage.id }}
           </div>
         </div>
         <div class="toolbar-right">
@@ -22,6 +23,7 @@
           <button @click="refreshSession" class="refresh-btn" title="Refresh session">🔄</button>
         </div>
       </div>
+
       <AnnotationsTool
         v-model:organ="annotationData.organ"
         v-model:diagnosis="annotationData.diagnosis"
@@ -29,19 +31,24 @@
         v-model:gender="annotationData.gender"
         v-model:age="annotationData.age"
       />
+
       <div class="viewer-wrapper">
          <ViewerToolbar
           :active-tool="activeTool"
-          :test-disabled="!isSaved"
           @select-tool="handleToolSelected"
           @undo="handleUndo"
           @clear="handleClear"
           @save="handleSave"
           @previous-image="handlePrevious"
           @next-image="handleNext"
-          @test-coordinates="handleTestCoordinates"
         />
         <div ref="viewerContainer" class="osd-container"></div>
+
+        <div v-if="hoveredAnnotation" class="info-box" :style="hoverStyle">
+          <div class="info-color-swatch" :style="{ backgroundColor: hoveredAnnotation.color }"></div>
+          <p>{{ hoveredAnnotation.text }}</p>
+        </div>
+
         <div v-if="!selectedImage && !viewerLoading" class="overlay empty-state">
             <div class="empty-content">
               <svg class="empty-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
@@ -59,7 +66,6 @@
     </div>
   </div>
 </template>
-
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import OpenSeadragon from 'openseadragon';
@@ -84,7 +90,6 @@ const sessionStatus = ref('Not created');
 const viewerContainer = ref(null);
 const activeTool = ref('pan');
 const annotationData = reactive({ organ: '', diagnosis: '', grade: '', gender: '', age: null });
-const isSaved = ref(false);
 
 let viewer = null;
 let anno = null;
@@ -120,7 +125,6 @@ const handleUndo = () => {
   if (lastCreatedAnnotation) {
     anno.removeAnnotation(lastCreatedAnnotation);
     lastCreatedAnnotation = null;
-    isSaved.value = false;
     toast.info('Son etiket geri alındı.');
   } else {
     toast.warning('Geri alınacak bir etiket bulunamadı.');
@@ -128,15 +132,14 @@ const handleUndo = () => {
 };
 
 const handleClear = () => {
-  if (confirm('Tüm etiketleri ve test noktalarını temizlemek istediğinizden emin misiniz?')) {
+  if (confirm('Tüm etiketleri temizlemek istediğinizden emin misiniz?')) {
     if (anno) anno.clearAnnotations();
-    viewer.clearOverlays();
-    isSaved.value = false;
   }
 };
 
 const handleSave = () => {
-  if (!selectedImage.value || !anno) return;
+  if (!selectedImage.value || !anno) return toast.info('Kaydedilecek bir resim bulunamadı.');
+
   const allAnnotations = anno.getAnnotations();
   if (allAnnotations.length === 0) return toast.info('Kaydedilecek etiket bulunamadı.');
 
@@ -154,69 +157,7 @@ const handleSave = () => {
   document.body.removeChild(link);
   URL.revokeObjectURL(url);
 
-  isSaved.value = true;
   toast.success(`Etiketler "${fileName}" olarak indirildi!`);
-};
-
-// --- HATA AYIKLAMA İÇİN GÜNCELLENMİŞ TEST FONKSİYONU ---
-const handleTestCoordinates = () => {
-  if (!isSaved.value) {
-    return toast.warning('Koordinatları test etmek için önce etiketleri kaydetmelisiniz.');
-  }
-  const allAnnotations = anno.getAnnotations();
-  if (allAnnotations.length === 0) return toast.info('Test edilecek etiket bulunamadı.');
-
-  viewer.clearOverlays();
-  toast.info(`Koordinatlar test ediliyor... (Detaylar için konsolu inceleyin)`);
-
-  let pointsFound = 0;
-  allAnnotations.forEach((annotation, index) => {
-    console.log(`--- ETİKET #${index + 1} İŞLENİYOR ---`);
-    try {
-      const selectorValue = annotation.target.selector.value;
-      const match = selectorValue.match(/points="([^"]*)"/);
-
-      if (!match || !match[1]) {
-        console.warn(`'points' verisi bulunamadı.`, annotation);
-        return;
-      }
-
-      const pointsString = match[1];
-      const firstPoint = pointsString.split(' ')[0];
-      const [x, y] = firstPoint.split(',').map(Number);
-      console.log(`Ayrıştırılan koordinatlar: x=${x}, y=${y}`);
-
-      if (isNaN(x) || isNaN(y)) {
-        console.warn(`Geçersiz koordinat verisi.`, { firstPoint });
-        return;
-      }
-
-      const imagePoint = new OpenSeadragon.Point(x, y);
-      console.log('OpenSeadragon.Point nesnesi oluşturuldu:', imagePoint);
-
-      const overlayEl = document.createElement('div');
-      overlayEl.className = 'debug-test-point'; // Elementi kolayca bulmak için class ekledik
-      overlayEl.style.width = '24px';
-      overlayEl.style.height = '24px';
-      overlayEl.style.backgroundColor = '#16a34a';
-      overlayEl.style.borderRadius = '50%';
-      overlayEl.style.border = '2px solid white';
-      overlayEl.style.opacity = '0.9';
-
-      console.log('Overlay elementi oluşturuldu:', overlayEl);
-      viewer.addOverlay({ element: overlayEl, location: imagePoint, placement: 'CENTER' });
-      console.log('viewer.addOverlay çağrıldı.');
-      pointsFound++;
-    } catch (e) {
-      console.error(`Etiket #${index + 1} işlenirken bir hata oluştu:`, e, annotation);
-    }
-  });
-
-  if (pointsFound > 0) {
-    toast.success(`${pointsFound} adet test noktası eklendi.`);
-  } else {
-    toast.error('Geçerli test noktası oluşturulamadı. Lütfen konsolu kontrol edin.');
-  }
 };
 
 const getCurrentImageIndex = () => {
@@ -275,8 +216,6 @@ const refreshSession = async () => {
 const selectImage = async (image) => {
   if (!image || selectedImage.value?.id === image.id) return;
   selectedImage.value = image;
-  isSaved.value = false;
-  if(viewer) viewer.clearOverlays();
   await loadImageInViewer(image);
 };
 
@@ -288,7 +227,6 @@ const setupViewer = () => {
 
   anno.on('createAnnotation', (annotation, override) => {
     lastCreatedAnnotation = annotation;
-    isSaved.value = false;
     const commentValue = `Organ: ${annotationData.organ || 'N/A'}, Dx: ${annotationData.diagnosis || 'N/A'}, Grade: ${annotationData.grade || 'N/A'}, Gender: ${annotationData.gender || 'N/A'}, Age: ${annotationData.age || 'N/A'}`;
     if (!Array.isArray(annotation.body)) annotation.body = [];
     annotation.body.push({ purpose: 'commenting', value: commentValue });
@@ -332,19 +270,38 @@ onUnmounted(() => {
   ImageCatalogAPI.cleanup();
 });
 </script>
-<style>
-/* Global Annotorious stilleri */
-.a9s-annotationlayer .a9s-selection .a9s-inner,
-.a9s-annotationlayer .a9s-selection .a9s-handle {
-  stroke: #ef4444 !important;
-  stroke-width: 2px !important;
-  fill: rgba(239, 68, 68, 0.25) !important;
-}
-.a9s-toolbar {
-  display: none !important;
-}
-</style>
+
 
 <style scoped>
-.viewer-container{display:flex;height:100vh;background-color:#f9fafb}.main-viewer{flex:1;display:flex;flex-direction:column}.viewer-wrapper{flex:1;position:relative;overflow:hidden}.osd-container{width:100%;height:100%;background-color:#000}.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10}.empty-state{background-color:#fff;color:#6b7280}.empty-content{text-align:center}.empty-icon{margin:0 auto;height:4rem;width:4rem;color:#d1d5db}.empty-title{margin-top:1rem;font-size:1.125rem;font-weight:500;line-height:1.75rem}.empty-subtitle{margin-top:.5rem;font-size:.875rem;color:#9ca3af;line-height:1.25rem}.loading-overlay{background-color:rgba(0,0,0,.5);z-index:20}.loading-content{text-align:center;color:#fff}.spinner-large{animation:spin 1s linear infinite;border-radius:9999px;height:3rem;width:3rem;border-width:2px;border-color:#fff;border-bottom-color:transparent;margin:0 auto}@keyframes spin{to{transform:rotate(360deg)}}.toolbar{height:3rem;background-color:#fff;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 1rem;justify-content:space-between}.toolbar-left{display:flex;align-items:center;gap:1rem}.toolbar-title{font-size:.875rem;color:#4b5563;line-height:1.25rem}.toolbar-info{font-size:.75rem;color:#6b7280;line-height:1rem}.toolbar-right{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:#6b7280;line-height:1rem}.refresh-btn{margin-left:.5rem;font-size:.75rem;background-color:#dbeafe;color:#2563eb;padding:.25rem .5rem;border-radius:.375rem;border:none;cursor:pointer;line-height:1rem}.refresh-btn:hover{background-color:#bfdbfe}
+/* Bilgi Kutusu Stili */
+.info-box {
+  position: fixed;
+  background-color: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 12px;
+  border-radius: 6px;
+  font-size: 12px;
+  z-index: 10000;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  white-space: pre-wrap;
+  max-width: 300px;
+}
+.info-color-swatch {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid white;
+  flex-shrink: 0;
+}
+.viewer-container{display:flex;height:100vh;background-color:#f9fafb}.main-viewer{flex:1;display:flex;flex-direction:column}.viewer-wrapper{flex:1;position:relative;overflow:hidden}.osd-container{width:100%;height:100%;background-color:#000}.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10}.empty-state{background-color:#fff;color:#6b7280}.empty-content{text-align:center}.empty-icon{margin:0 auto;height:4rem;width:4rem;color:#d1d5db}.empty-title{margin-top:1rem;font-size:1.125rem;font-weight:500;line-height:1.75rem}.empty-subtitle{margin-top:.5rem;font-size:.875rem;color:#9ca3af;line-height:1.25rem}.loading-overlay{background-color:rgba(0,0,0,.5);z-index:20}.loading-content{text-align:center;color:#fff}.spinner-large{animation:spin 1s linear infinite;border-radius:9999px;height:3rem;width:3rem;border-width:2px;border-color:#fff;border-bottom-color:transparent;margin:0 auto}@keyframes spin{to{transform:rotate(360deg)}}.toolbar{height:3rem;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 1rem;justify-content:space-between}.toolbar-left{display:flex;align-items:center;gap:1rem}.toolbar-title{font-size:.875rem;color:#4b5563;line-height:1.25rem}.toolbar-info{font-size:.75rem;color:#6b7280;line-height:1rem}.toolbar-right{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:#6b7280;line-height:1rem}.refresh-btn{margin-left:.5rem;font-size:.75rem;background-color:#dbeafe;color:#2563eb;padding:.25rem .5rem;border-radius:.375rem;border:none;cursor:pointer;line-height:1rem}.refresh-btn:hover{background-color:#bfdbfe}
+
+/* `AnnotationsTool` için yeni stil */
+.annotations-tool-wrapper {
+  padding: 8px 12px;
+  background-color: #f9fafb;
+  border-bottom: 1px solid #e5e7eb;
+}
 </style>
