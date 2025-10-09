@@ -1,5 +1,5 @@
 <template>
-  <div class="viewer-toolbar">
+  <div class="viewer-toolbar-vertical">
     <button :class="{ active: activeTool === 'pan' }" @click="selectTool('pan')" title="Pan">
       <img src="@/assets/css/viewer-assets/pan.svg" alt="Pan" />
     </button>
@@ -24,22 +24,15 @@
     <button @click="$emit('save')" title="Save Annotations" class="save-btn">
       <img src="@/assets/css/viewer-assets/save.svg" alt="Save" />
     </button>
-    <button @click="$emit('test-coordinates')" title="Test Coordinates" class="test-btn" :disabled="testDisabled">
-      <img src="@/assets/css/viewer-assets/test.svg" alt="Test" />
-    </button>
   </div>
 </template>
 
 <script setup>
 defineProps({
   activeTool: String,
-  testDisabled: { // Yeni prop
-    type: Boolean,
-    default: true
-  }
 });
 
-const emit = defineEmits(['select-tool', 'undo', 'clear', 'save', 'previous-image', 'next-image', 'test-coordinates']); // Yeni event
+const emit = defineEmits(['select-tool', 'undo', 'clear', 'save', 'previous-image', 'next-image']);
 
 const selectTool = (tool) => {
   emit('select-tool', tool);
@@ -47,10 +40,11 @@ const selectTool = (tool) => {
 </script>
 
 <style scoped>
-.viewer-toolbar {
+/* Sağ tarafta dikey duracak yeni stil */
+.viewer-toolbar-vertical {
   position: absolute;
-  top: 100px;
-  left: 10px;
+  top: 16px;
+  right: 16px; /* Sol yerine sağa yasla */
   z-index: 10;
   display: flex;
   flex-direction: column;
@@ -60,7 +54,7 @@ const selectTool = (tool) => {
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.15);
 }
-.viewer-toolbar button {
+.viewer-toolbar-vertical button {
   width: 36px;
   height: 36px;
   display: flex;
@@ -72,20 +66,16 @@ const selectTool = (tool) => {
   cursor: pointer;
   transition: all 0.2s ease;
 }
-.viewer-toolbar button:hover:not(:disabled) {
+.viewer-toolbar-vertical button:hover:not(:disabled) {
   background-color: #e5e7eb;
   border-color: #d1d5db;
 }
-.viewer-toolbar button.active {
+.viewer-toolbar-vertical button.active {
   background-color: #dbeafe;
   border-color: #3b82f6;
   color: #3b82f6;
 }
-.viewer-toolbar button:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-.viewer-toolbar button img {
+.viewer-toolbar-vertical button img {
   width: 20px;
   height: 20px;
 }
@@ -97,13 +87,7 @@ const selectTool = (tool) => {
 .save-btn {
   background-color: #16a34a;
 }
-.save-btn:hover:not(:disabled) {
+.save-btn:hover {
   background-color: #15803d;
-}
-.test-btn {
-  background-color: #6366f1; /* Indigo */
-}
-.test-btn:hover:not(:disabled) {
-  background-color: #4f46e5;
 }
 </style>
