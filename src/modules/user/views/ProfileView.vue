@@ -6,6 +6,6 @@
 </template>
 
 <script setup>
-import UserProfile from '@/components/user/UserProfile.vue'
-import ChangePasswordForm from '@/components/user/ChangePasswordForm.vue'
+import UserProfile from '@/modules/user/components/UserProfile.vue'
+import ChangePasswordForm from '@/modules/user/components/ChangePasswordForm.vue'
 </script>

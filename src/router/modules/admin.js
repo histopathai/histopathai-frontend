@@ -1,6 +1,6 @@
 import AdminLayout from '@/layouts/AdminLayout.vue'
-import AdminDashboard from '@/views/admin/AdminDashboard.vue'
-import UserManagementView from '@/views/admin/UserManagementView.vue'
+import AdminDashboard from '@/modules/admin/views/AdminDashboard.vue'
+import UserManagementView from '@/modules/admin/views/UserManagementView.vue'
 
 
 export default [

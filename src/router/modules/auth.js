@@ -1,7 +1,7 @@
 import AuthLayout from '@/layouts/AuthLayout.vue'
-import LoginView from '@/views/auth/LoginView.vue'
-import RegisterView from '@/views/auth/RegisterView.vue'
-import AccountStatusView from '@/views/auth/AccountStatusView.vue'
+import LoginView from '@/modules/auth/views/LoginView.vue'
+import RegisterView from '@/modules/auth/views/RegisterView.vue'
+import AccountStatusView from '@/modules/auth/views/AccountStatusView.vue'
 
 export default [
   {

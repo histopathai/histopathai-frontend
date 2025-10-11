@@ -12,7 +12,7 @@
 </template>
 
 <script setup>
-import UserList from '@/components/admin/UserList.vue'
+import UserList from '@/modules/admin/components/UserList.vue'
 </script>
 
 <style scoped>
