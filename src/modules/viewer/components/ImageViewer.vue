@@ -66,6 +66,7 @@
     </div>
   </div>
 </template>
+
 <script setup>
 import { ref, reactive, onMounted, onUnmounted, computed, nextTick } from 'vue';
 import OpenSeadragon from 'openseadragon';
@@ -90,10 +91,19 @@ const sessionStatus = ref('Not created');
 const viewerContainer = ref(null);
 const activeTool = ref('pan');
 const annotationData = reactive({ organ: '', diagnosis: '', grade: '', gender: '', age: null });
+const hoveredAnnotation = ref(null); // Define hoveredAnnotation
 
 let viewer = null;
 let anno = null;
 let lastCreatedAnnotation = null;
+
+const hoverStyle = computed(() => {
+  if (!hoveredAnnotation.value) return {};
+  return {
+    top: hoveredAnnotation.value.top,
+    left: hoveredAnnotation.value.left,
+  };
+});
 
 const groupedImages = computed(() => {
   if (!Array.isArray(images.value)) return {};
@@ -216,6 +226,16 @@ const refreshSession = async () => {
 const selectImage = async (image) => {
   if (!image || selectedImage.value?.id === image.id) return;
   selectedImage.value = image;
+
+  // --- YENİ EKLENEN KISIM ---
+  // Firestore'dan gelen veriyi `annotationData` objesine ata
+  annotationData.organ = image.organ_type || '';
+  annotationData.diagnosis = image.disease_type || '';
+  annotationData.grade = image.grade || '';
+  annotationData.gender = image.gender || '';
+  annotationData.age = image.age || null;
+  // --- BİTTİ ---
+
   await loadImageInViewer(image);
 };
 
@@ -233,11 +253,27 @@ const setupViewer = () => {
     override(annotation);
   });
 
+  // Hover event'lerini de ekleyelim
+  anno.on('mouseEnterAnnotation', (annotation, event) => {
+    const text = annotation.body.find(b => b.purpose === 'commenting')?.value || 'No data';
+    hoveredAnnotation.value = {
+      text: text,
+      color: annotation.drawingStyle?.stroke || '#FFFFFF', // Renk özelliği varsa kullan
+      top: `${event.clientY + 15}px`,
+      left: `${event.clientX + 15}px`
+    };
+  });
+
+  anno.on('mouseLeaveAnnotation', () => {
+    hoveredAnnotation.value = null;
+  });
+
   viewer.addHandler('open', () => {
     viewerLoading.value = false;
     if (anno) anno.clearAnnotations();
     handleToolSelected(activeTool.value);
   });
+
   viewer.addHandler('open-failed', e => {
     viewerLoading.value = false;
     toast.error(`Görüntü yüklenemedi: ${e.message}.`);
@@ -297,8 +333,6 @@ onUnmounted(() => {
   flex-shrink: 0;
 }
 .viewer-container{display:flex;height:100vh;background-color:#f9fafb}.main-viewer{flex:1;display:flex;flex-direction:column}.viewer-wrapper{flex:1;position:relative;overflow:hidden}.osd-container{width:100%;height:100%;background-color:#000}.overlay{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;z-index:10}.empty-state{background-color:#fff;color:#6b7280}.empty-content{text-align:center}.empty-icon{margin:0 auto;height:4rem;width:4rem;color:#d1d5db}.empty-title{margin-top:1rem;font-size:1.125rem;font-weight:500;line-height:1.75rem}.empty-subtitle{margin-top:.5rem;font-size:.875rem;color:#9ca3af;line-height:1.25rem}.loading-overlay{background-color:rgba(0,0,0,.5);z-index:20}.loading-content{text-align:center;color:#fff}.spinner-large{animation:spin 1s linear infinite;border-radius:9999px;height:3rem;width:3rem;border-width:2px;border-color:#fff;border-bottom-color:transparent;margin:0 auto}@keyframes spin{to{transform:rotate(360deg)}}.toolbar{height:3rem;border-bottom:1px solid #e5e7eb;display:flex;align-items:center;padding:0 1rem;justify-content:space-between}.toolbar-left{display:flex;align-items:center;gap:1rem}.toolbar-title{font-size:.875rem;color:#4b5563;line-height:1.25rem}.toolbar-info{font-size:.75rem;color:#6b7280;line-height:1rem}.toolbar-right{display:flex;align-items:center;gap:.5rem;font-size:.75rem;color:#6b7280;line-height:1rem}.refresh-btn{margin-left:.5rem;font-size:.75rem;background-color:#dbeafe;color:#2563eb;padding:.25rem .5rem;border-radius:.375rem;border:none;cursor:pointer;line-height:1rem}.refresh-btn:hover{background-color:#bfdbfe}
-
-/* `AnnotationsTool` için yeni stil */
 .annotations-tool-wrapper {
   padding: 8px 12px;
   background-color: #f9fafb;
