@@ -123,104 +123,70 @@ import ImageCatalogAPI from '@/api/image_catalog.js'
 export default {
   name: 'ViewerSidebar',
   props: {
-    images: {
-      type: Array,
-      default: () => []
-    },
-    selectedImage: {
-      type: Object,
-      default: null
-    },
-    searchQuery: {
-      type: String,
-      default: ''
-    },
-    loading: {
-      type: Boolean,
-      default: false
-    },
-    error: {
-      type: String,
-      default: null
-    }
+    images: { type: Array, default: () => [] },
+    selectedImage: { type: Object, default: null },
+    searchQuery: { type: String, default: '' },
+    loading: { type: Boolean, default: false },
+    error: { type: String, default: null }
   },
   emits: ['select-image', 'reload-images', 'toggle-performance-stats', 'update:searchQuery'],
   setup(props) {
-    const expandedDatasets = ref([])
-    const thumbnailCache = {}
+    const expandedDatasets = ref([]);
+    const thumbnailCache = {};
 
     const groupedImages = computed(() => {
-      if (!Array.isArray(props.images)) {
-        return {}
-      }
-      const groups = {}
+      if (!Array.isArray(props.images)) return {};
+      const groups = {};
       props.images.forEach(image => {
-        const dataset = image.dataset_name || 'Unknown'
-        if (!groups[dataset]) {
-          groups[dataset] = []
-        }
-        groups[dataset].push(image)
-      })
+        const dataset = image.dataset_name || 'Unknown';
+        if (!groups[dataset]) groups[dataset] = [];
+        groups[dataset].push(image);
+      });
       Object.keys(groups).forEach(dataset => {
-        groups[dataset].sort((a, b) =>
-          (a.file_name || a.id).localeCompare(b.file_name || b.id)
-        )
-      })
-      return groups
-    })
+        groups[dataset].sort((a, b) => (a.file_name || a.id).localeCompare(b.file_name || b.id));
+      });
+      return groups;
+    });
 
     const filteredGroupedImages = computed(() => {
-      if (!props.searchQuery.trim()) {
-        return groupedImages.value
-      }
-      const filtered = {}
-      const query = props.searchQuery.toLowerCase()
+      if (!props.searchQuery.trim()) return groupedImages.value;
+      const filtered = {};
+      const query = props.searchQuery.toLowerCase();
       Object.keys(groupedImages.value).forEach(dataset => {
         const filteredImages = groupedImages.value[dataset].filter(image =>
           (image.file_name || '').toLowerCase().includes(query) ||
           (image.id || '').toLowerCase().includes(query) ||
           (image.organ_type || '').toLowerCase().includes(query) ||
           dataset.toLowerCase().includes(query)
-        )
-        if (filteredImages.length > 0) {
-          filtered[dataset] = filteredImages
-        }
-      })
-      return filtered
-    })
+        );
+        if (filteredImages.length > 0) filtered[dataset] = filteredImages;
+      });
+      return filtered;
+    });
 
     const toggleDataset = (datasetName) => {
-      const index = expandedDatasets.value.indexOf(datasetName)
-      if (index > -1) {
-        expandedDatasets.value.splice(index, 1)
-      } else {
-        expandedDatasets.value.push(datasetName)
-      }
-    }
+      const index = expandedDatasets.value.indexOf(datasetName);
+      if (index > -1) expandedDatasets.value.splice(index, 1);
+      else expandedDatasets.value.push(datasetName);
+    };
 
     const getThumbnailUrl = (imageId) => {
-      if (thumbnailCache[imageId]) {
-        return thumbnailCache[imageId]
-      }
-      const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMzMC42Mjc0IDMyIDM2IDE5LjI1NDggMzYgM0MzNiAxMy4yNTQ4IDMwLjYyNzQgMjIgMjQgMjJDMTcuMzcyNiAyMiAxMiAxMy4yNTQ4IDEyIDNDMTIgMTkuMjU0OCAxNy4zNzI2IDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
+      if (thumbnailCache[imageId]) return thumbnailCache[imageId];
+      const placeholder = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMzMC42Mjc0IDMyIDM2IDE5LjI1NDggMzYgM0MzNiAxMy4yNTQ4IDMwLjYyNzQgMjIgMjQgMjJDMTcuMzcyNiAyMiAxMiAxMy4yNTQ4IDEyIDNDMTIgMTkuMjU0OCAxNy4zNzI2IDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
       ImageCatalogAPI.getThumbnailUrl(imageId)
         .then(url => {
-          thumbnailCache[imageId] = url
+          thumbnailCache[imageId] = url;
           document.querySelectorAll(`img[data-image-id="${imageId}"]`).forEach(img => {
-            if (img.src.startsWith('data:')) {
-              img.src = url
-            }
-          })
+            if (img.src.startsWith('data:')) img.src = url;
+          });
         })
-        .catch(err => {
-          console.error('Failed to load thumbnail:', err)
-        })
-      return placeholder
-    }
+        .catch(err => console.error('Failed to load thumbnail:', err));
+      return placeholder;
+    };
 
     const handleImageError = (event) => {
-      event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMzMC42Mjc0IDMyIDM2IDE5LjI1NDggMzYgM0MzNiAxMy4yNTQ4IDMwLjYyNzQgMjIgMjQgMjJDMTcuMzcyNiAyMiAxMiAxMy4yNTQ4IDEyIDNDMTIgMTkuMjU0OCAxNy4zNzI2IDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K'
-    }
+      event.target.src = 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNDgiIGhlaWdodD0iNDgiIHZpZXdCb3g9IjAgMCA0OCA0OCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjQ4IiBoZWlnaHQ9IjQ4IiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik0yNCAzMkMzMC42Mjc0IDMyIDM2IDE5LjI1NDggMzYgM0MzNiAxMy4yNTQ4IDMwLjYyNzQgMjIgMjQgMjJDMTcuMzcyNiAyMiAxMiAxMy4yNTQ4IDEyIDNDMTIgMTkuMjU0OCAxNy4zNzI2IDMyIDI0IDMyWiIgZmlsbD0iIzlDQTNBRiIvPgo8L3N2Zz4K';
+    };
 
     return {
       expandedDatasets,
@@ -228,12 +194,13 @@ export default {
       filteredGroupedImages,
       toggleDataset,
       getThumbnailUrl,
-      handleImageError
-    }
+      handleImageError,
+    };
   }
 }
 </script>
 
 <style scoped>
-.sidebar{width:20rem;background-color:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column}.sidebar-header{padding:1rem;border-bottom:1px solid #e5e7eb}.header-content{display:flex;justify-content:space-between;align-items:center}.header-title{font-size:1.125rem;font-weight:600;color:#1f2937;line-height:1.75rem}.header-subtitle{font-size:.875rem;color:#4b5563;line-height:1.25rem}.stats-toggle-btn{font-size:.75rem;background-color:#dbeafe;color:#2563eb;padding:.25rem .5rem;border-radius:.375rem;border:none;cursor:pointer;line-height:1rem}.stats-toggle-btn:hover{background-color:#bfdbfe}.search-container{padding:1rem;border-bottom:1px solid #e5e7eb}.search-wrapper{position:relative}.search-input{width:100%;padding-left:2.5rem;padding-right:1rem;padding-top:.5rem;padding-bottom:.5rem;border:1px solid #d1d5db;border-radius:.5rem;outline:none}.search-input:focus{border-color:transparent;box-shadow:0 0 0 2px #3b82f6}.search-icon{position:absolute;left:.75rem;top:.625rem;height:1.25rem;width:1.25rem;color:#9ca3af}.dataset-tree{flex:1;overflow-y:auto}.tree-content{padding:1rem}.dataset-group{margin-bottom:1rem}.loading-state,.empty-state-sidebar{text-align:center;padding:2rem 0;color:#6b7280}.spinner{animation:spin 1s linear infinite;border-radius:9999px;height:2rem;width:2rem;border-width:2px;border-color:#3b82f6;border-bottom-color:transparent;margin:0 auto}@keyframes spin{to{transform:rotate(360deg)}}.loading-text{margin-top:.5rem;font-size:.875rem;color:#4b5563;line-height:1.25rem}.error-state{text-align:center;padding:2rem 0;color:#dc2626}.retry-btn{margin-top:.5rem;padding:.5rem 1rem;background-color:#3b82f6;color:#fff;border-radius:.375rem;border:none;cursor:pointer}.retry-btn:hover{background-color:#2563eb}.dataset-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem;background-color:#f3f4f6;border-radius:.5rem;cursor:pointer;transition:background-color .2s ease}.dataset-header:hover{background-color:#e5e7eb}.dataset-header-content{display:flex;align-items:center;gap:.5rem}.chevron-icon{height:1rem;width:1rem;color:#4b5563;transition:transform .2s ease}.chevron-icon.rotated{transform:rotate(90deg)}.dataset-name{font-weight:500;color:#1f2937}.image-count{font-size:.875rem;color:#6b7280;background-color:#d1d5db;padding:.25rem .5rem;border-radius:9999px;line-height:1.25rem}.images-list{margin-top:.5rem;margin-left:1rem}.image-item{display:flex;align-items:center;padding:.75rem;border-radius:.5rem;cursor:pointer;transition:background-color .2s ease,border-color .2s ease;border:1px solid transparent;margin-bottom:.25rem}.image-item:hover{background-color:#f9fafb}.image-item.selected{background-color:#dbeafe;border-color:#93c5fd}.thumbnail{flex-shrink:0;width:3rem;height:3rem;background-color:#e5e7eb;border-radius:.5rem;overflow:hidden}.thumbnail-img{width:100%;height:100%;object-fit:cover}.image-info{margin-left:.75rem;flex:1;min-width:0}.image-name{font-size:.875rem;font-weight:500;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25rem}.image-organ{font-size:.75rem;color:#6b7280;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1rem}.image-id{font-size:.75rem;color:#9ca3af;line-height:1rem}.selected-info{padding:1rem;border-top:1px solid #e5e7eb;background-color:#f9fafb}.selected-title{font-size:.875rem;font-weight:500;color:#1f2937;margin-bottom:.5rem;line-height:1.25rem}.selected-details{font-size:.75rem;color:#4b5563;line-height:1rem}.selected-details p{margin-bottom:.25rem}.detail-label{font-weight:500}.dataset-tree::-webkit-scrollbar{width:6px}.dataset-tree::-webkit-scrollbar-track{background:#f1f1f1}.dataset-tree::-webkit-scrollbar-thumb{background:#c1c1c1;border-radius:3px}.dataset-tree::-webkit-scrollbar-thumb:hover{background:#a1a1a1}
+/* Mevcut stiller... */
+.sidebar{width:20rem;background-color:#fff;border-right:1px solid #e5e7eb;display:flex;flex-direction:column}.sidebar-header{padding:1rem;border-bottom:1px solid #e5e7eb}.header-content{display:flex;justify-content:space-between;align-items:center}.header-title{font-size:1.125rem;font-weight:600;color:#1f2937;line-height:1.75rem}.header-subtitle{font-size:.875rem;color:#4b5563;line-height:1.25rem}.stats-toggle-btn{font-size:.75rem;background-color:#dbeafe;color:#2563eb;padding:.25rem .5rem;border-radius:.375rem;border:none;cursor:pointer;line-height:1rem}.search-container{padding:1rem;border-bottom:1px solid #e5e7eb}.search-wrapper{position:relative}.search-input{width:100%;padding-left:2.5rem;padding-right:1rem;padding-top:.5rem;padding-bottom:.5rem;border:1px solid #d1d5db;border-radius:.5rem;outline:none}.search-input:focus{border-color:transparent;box-shadow:0 0 0 2px #3b82f6}.search-icon{position:absolute;left:.75rem;top:.625rem;height:1.25rem;width:1.25rem;color:#9ca3af}.dataset-tree{flex:1;overflow-y:auto}.tree-content{padding:1rem}.dataset-group{margin-bottom:1rem}.loading-state,.empty-state-sidebar{text-align:center;padding:2rem 0;color:#6b7280}.spinner{animation:spin 1s linear infinite;border-radius:9999px;height:2rem;width:2rem;border-width:2px;border-color:#3b82f6;border-bottom-color:transparent;margin:0 auto}@keyframes spin{to{transform:rotate(360deg)}}.error-state{text-align:center;padding:2rem 0;color:#dc2626}.retry-btn{margin-top:.5rem;padding:.5rem 1rem;background-color:#3b82f6;color:#fff;border-radius:.375rem;border:none;cursor:pointer}.dataset-header{display:flex;align-items:center;justify-content:space-between;padding:.75rem;background-color:#f3f4f6;border-radius:.5rem;cursor:pointer}.dataset-header:hover{background-color:#e5e7eb}.dataset-header-content{display:flex;align-items:center;gap:.5rem}.chevron-icon{height:1rem;width:1rem;color:#4b5563;transition:transform .2s ease}.chevron-icon.rotated{transform:rotate(90deg)}.dataset-name{font-weight:500;color:#1f2937}.image-count{font-size:.875rem;color:#6b7280;background-color:#d1d5db;padding:.25rem .5rem;border-radius:9999px;line-height:1.25rem}.images-list{margin-top:.5rem;margin-left:1rem}.image-item{display:flex;align-items:center;padding:.75rem;border-radius:.5rem;cursor:pointer;border:1px solid transparent;margin-bottom:.25rem}.image-item:hover{background-color:#f9fafb}.image-item.selected{background-color:#dbeafe;border-color:#93c5fd}.thumbnail{flex-shrink:0;width:3rem;height:3rem;background-color:#e5e7eb;border-radius:.5rem;overflow:hidden}.thumbnail-img{width:100%;height:100%;object-fit:cover}.image-info{margin-left:.75rem;flex:1;min-width:0}.image-name{font-size:.875rem;font-weight:500;color:#111827;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;line-height:1.25rem}.image-organ{font-size:.75rem;color:#6b7280;line-height:1rem}.image-id{font-size:.75rem;color:#9ca3af;line-height:1rem}.selected-info{padding:1rem;border-top:1px solid #e5e7eb;background-color:#f9fafb}.selected-title{font-size:.875rem;font-weight:500;color:#1f2937;margin-bottom:.5rem;line-height:1.25rem}.selected-details p{margin-bottom:.25rem}.detail-label{font-weight:500}
 </style>

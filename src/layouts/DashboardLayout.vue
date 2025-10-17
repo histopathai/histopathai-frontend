@@ -13,6 +13,12 @@
             >
               WSI Viewer
             </router-link>
+             <router-link
+              to="/dashboard/workspaces"
+              class="text-sm font-medium text-blue-600 hover:text-blue-800 gap-2 ml-4"
+            >
+              Çalışma Alanlarım
+            </router-link>
           </div>
 
           <div class="flex items-center space-x-4">

@@ -1,8 +1,10 @@
-// src/router/modules/user.js - Fixed
+// src/router/modules/user.js
 import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import DashboardView from '@/modules/user/views/DashboardView.vue'
 import ProfileView from '@/modules/user/views/ProfileView.vue'
 import ImageViewer from '@/modules/viewer/components/ImageViewer.vue'
+import WorkspaceView from '@/modules/workspace/views/WorkspaceView.vue' // Yeni import
+
 export default [
   {
     path: '/dashboard',
@@ -22,9 +24,16 @@ export default [
         meta: { title: 'Profile' }
       },
       {
-        path: '/wsi-viewer', // Bu yolu DashboardLayout'taki router-link'e uygun hale getirdik
-        name: 'WSIViewer', // Yeni bir isim verilebilir veya ImageViewer kullanılabilir
-        component: ImageViewer, // ImageViewer bileşenini bu yola bağla
+        // Yeni Çalışma Alanı rotası
+        path: 'workspaces',
+        name: 'Workspaces',
+        component: WorkspaceView,
+        meta: { title: 'My Workspaces' }
+      },
+      {
+        path: '/wsi-viewer',
+        name: 'WSIViewer',
+        component: ImageViewer,
         meta: {
           title: 'WSI Viewer',
           requiresAuth: true,
