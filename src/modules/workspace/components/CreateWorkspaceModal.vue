@@ -14,20 +14,52 @@
 
                   <div class="mt-4 space-y-4">
                     <div>
-                      <label for="workspaceName" class="form-label">Veri Seti Adı</label>
-                      <input type="text" v-model="name" id="workspaceName" class="form-input" required placeholder="Örn: Prostat Kanser Veri Seti">
-                    </div>
-                    <div>
-                      <label for="organType" class="form-label">Organ Tipi</label>
-                      <input type="text" v-model="organType" id="organType" class="form-input" placeholder="Örn: Prostat">
-                    </div>
-                     <div>
-                      <label for="description" class="form-label">Açıklama</label>
-                      <textarea v-model="description" id="description" class="form-input" rows="3" placeholder="Veri setinin kısa açıklamasını içermelidir."></textarea>
+                      <div class="flex justify-between items-center">
+                        <label for="workspaceName" class="form-label">Çalışma Alanı Adı *</label>
+                        <span class="text-sm" :class="name.length > MAX_NAME_LENGTH ? 'text-red-500' : 'text-gray-500'">
+                          {{ name.length }} / {{ MAX_NAME_LENGTH }}
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        v-model="name"
+                        id="workspaceName"
+                        class="form-input"
+                        :class="{'border-red-500': errors.name}"
+                        :maxlength="MAX_NAME_LENGTH"
+                        placeholder="Örn: Prostat Kanser Veri Seti (PKVS)"
+                      >
+                      <p v-if="errors.name" class="mt-1 text-sm text-red-600">{{ errors.name }}</p>
                     </div>
 
                     <div>
-                      <label for="resource" class="form-label">Kaynak Tipi</label>
+                      <label for="organType" class="form-label">Organ Tipi *</label>
+                      <input
+                        type="text"
+                        v-model="organType"
+                        id="organType"
+                        class="form-input"
+                        :class="{'border-red-500': errors.organType}"
+                        placeholder="Örn: Prostat"
+                      >
+                       <p v-if="errors.organType" class="mt-1 text-sm text-red-600">{{ errors.organType }}</p>
+                    </div>
+
+                    <div>
+                      <label for="description" class="form-label">Açıklama *</label>
+                      <textarea
+                        v-model="description"
+                        id="description"
+                        class="form-input"
+                        :class="{'border-red-500': errors.description}"
+                        rows="3"
+                        placeholder="Projenin veya veri setinin kısa açıklaması girilmelidir."
+                      ></textarea>
+                       <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
+                    </div>
+
+                    <div>
+                      <label for="resource" class="form-label">Kaynak Tipi *</label>
                       <select v-model="resource" id="resource" class="form-input">
                         <option value="private">Özel (Kullanıcı Tarafından Oluşturuldu)</option>
                         <option value="public">Halka Açık (Mevcut Bir Veri Seti)</option>
@@ -36,32 +68,61 @@
 
                     <div class="border-t pt-4 space-y-4">
                         <div>
-                            <label for="organization" class="form-label">Oluşturan Kurum (Organization)</label>
-                            <input type="text" v-model="organization" id="organization" class="form-input" placeholder="Örn: Bursa Uludağ Üniversitesi Tıp Fakültesi Tıbbi Patoloji A.B.D.">
+                            <label for="organization" class="form-label">Oluşturan Kurum (Organization) *</label>
+                            <input
+                              type="text"
+                              v-model="organization"
+                              id="organization"
+                              class="form-input"
+                              :class="{'border-red-500': errors.organization}"
+                              placeholder="Örn: Bursa Uludağ Üniversitesi Tıp Fakültesi"
+                            >
+                            <p v-if="errors.organization" class="mt-1 text-sm text-red-600">{{ errors.organization }}</p>
                         </div>
                         <div>
-                            <label for="license" class="form-label">Lisans</label>
-                            <input type="text" v-model="license" id="license" class="form-input" placeholder="Örn: Kurum İçi Kullanım">
+                            <label for="license" class="form-label">Lisans *</label>
+                            <input
+                              type="text"
+                              v-model="license"
+                              id="license"
+                              class="form-input"
+                              :class="{'border-red-500': errors.license}"
+                              placeholder="Örn: Kurum İçi Kullanım"
+                            >
+                            <p v-if="errors.license" class="mt-1 text-sm text-red-600">{{ errors.license }}</p>
                         </div>
                         <div class="grid grid-cols-2 gap-4">
                             <div>
-                                <label for="releaseYear" class="form-label">Yıl</label>
-                                <input type="number" v-model="releaseYear" id="releaseYear" class="form-input" placeholder="Örn: 2025">
+                                <label for="releaseYear" class="form-label">Yıl *</label>
+                                <input
+                                  type="number"
+                                  v-model="releaseYear"
+                                  id="releaseYear"
+                                  class="form-input"
+                                  :class="{'border-red-500': errors.releaseYear}"
+                                  placeholder="Örn: 2025"
+                                >
+                                <p v-if="errors.releaseYear" class="mt-1 text-sm text-red-600">{{ errors.releaseYear }}</p>
                             </div>
                             <div>
-                                <label for="releaseVersion" class="form-label">Sürüm</label>
+                                <label for="releaseVersion" class="form-label">Sürüm (Opsiyonel)</label>
                                 <input type="text" v-model="releaseVersion" id="releaseVersion" class="form-input" placeholder="Örn: v1.0">
                             </div>
                         </div>
                     </div>
 
                     <div v-if="resource === 'public'">
-                        <label for="resourceURL" class="form-label">Kaynak URL'i</label>
-                        <input type="url" v-model="resourceURL" id="resourceURL" class="form-input" placeholder="https://pathology.example.com/dataset">
+                        <label for="resourceURL" class="form-label">Kaynak URL'i *</label>
+                        <input
+                          type="url"
+                          v-model="resourceURL"
+                          id="resourceURL"
+                          class="form-input"
+                          :class="{'border-red-500': errors.resourceURL}"
+                          placeholder="https://pathology.example.com/dataset"
+                        >
+                        <p v-if="errors.resourceURL" class="mt-1 text-sm text-red-600">{{ errors.resourceURL }}</p>
                     </div>
-                  </div>
-                  <div v-if="error" class="mt-3 text-red-600 text-sm">
-                      {{ error }}
                   </div>
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
@@ -86,7 +147,8 @@ const props = defineProps({
 });
 const emit = defineEmits(['close', 'created']);
 
-// Form alanları için ref'ler
+const MAX_NAME_LENGTH = 50;
+
 const name = ref('');
 const organType = ref('');
 const description = ref('');
@@ -97,12 +159,14 @@ const releaseYear = ref(null);
 const releaseVersion = ref('');
 const resource = ref('private');
 
-const error = ref('');
+const errors = ref({});
 
-// Kaynak tipi 'private' olarak değiştiğinde sadece URL'i temizle
 watch(resource, (newValue) => {
   if (newValue === 'private') {
     resourceURL.value = '';
+    if (errors.value.resourceURL) {
+      delete errors.value.resourceURL;
+    }
   }
 });
 
@@ -116,16 +180,64 @@ const resetForm = () => {
     releaseYear.value = null;
     releaseVersion.value = '';
     resource.value = 'private';
-    error.value = '';
+    errors.value = {};
 };
 
-const createWorkspace = () => {
+
+const validateForm = () => {
+  errors.value = {};
+
+  // 1. İsim kontrolü
   if (!name.value.trim()) {
-    error.value = 'Çalışma alanı adı boş olamaz.';
-    return;
+    errors.value.name = 'Çalışma alanı adı zorunludur.';
+  } else if (name.value.length > MAX_NAME_LENGTH) {
+    errors.value.name = `Ad ${MAX_NAME_LENGTH} karakterden uzun olamaz.`;
   }
 
-  // Frontend'den toplanan verileri bir obje olarak hazırla
+  // 2. Organ Tipi
+  if (!organType.value.trim()) {
+    errors.value.organType = 'Organ tipi zorunludur.';
+  }
+
+  // 3. Açıklama
+  if (!description.value.trim()) {
+    errors.value.description = 'Açıklama zorunludur.';
+  }
+
+  // 4. Kurum
+  if (!organization.value.trim()) {
+    errors.value.organization = 'Kurum bilgisi zorunludur.';
+  }
+
+  // 5. Lisans
+  if (!license.value.trim()) {
+    errors.value.license = 'Lisans bilgisi zorunludur.';
+  }
+
+  // 6. Yıl
+  if (!releaseYear.value) {
+    errors.value.releaseYear = 'Yıl zorunludur.';
+  } else if (releaseYear.value < 1900 || releaseYear.value > new Date().getFullYear() + 1) {
+    errors.value.releaseYear = 'Geçerli bir yıl giriniz.';
+  }
+
+  // 7. Kaynak URL (Koşullu zorunlu)
+  if (resource.value === 'public' && !resourceURL.value.trim()) {
+    errors.value.resourceURL = 'Halka açık kaynaklar için URL zorunludur.';
+  }
+
+  // Eğer errors objesinde hiç anahtar yoksa, form geçerlidir
+  return Object.keys(errors.value).length === 0;
+};
+
+// Çalışma alanı oluşturma fonksiyonu
+const createWorkspace = () => {
+  // Formu göndermeden önce doğrula
+  if (!validateForm()) {
+    return; // Form geçerli değilse işlemi durdur
+  }
+
+  // Form geçerliyse, veri objesini hazırla
   const workspaceData = {
     name: name.value.trim(),
     organType: organType.value.trim(),
@@ -137,12 +249,13 @@ const createWorkspace = () => {
     releaseVersion: releaseVersion.value.trim(),
   };
 
-  // Eğer kaynak halka açıksa, URL bilgisini de ekle
   if (resource.value === 'public') {
     workspaceData.resourceURL = resourceURL.value.trim();
   }
 
+  // Event'i yayınla ve formu sıfırla
   emit('created', workspaceData);
   resetForm();
 };
+
 </script>
