@@ -68,7 +68,7 @@
 
                     <div class="border-t pt-4 space-y-4">
                         <div>
-                            <label for="organization" class="form-label">Oluşturan Kurum (Organization) *</label>
+                            <label for="organization" class="form-label">Oluşturan Kurum *</label>
                             <input
                               type="text"
                               v-model="organization"
