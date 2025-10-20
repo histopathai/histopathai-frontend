@@ -37,7 +37,8 @@ export default [
         meta: {
           title: 'WSI Viewer',
           requiresAuth: true,
-          requiresActive: true
+          requiresActive: true,
+          fullWidth: true // <-- BU SATIRI EKLEYİN
         }
       }
     ]
