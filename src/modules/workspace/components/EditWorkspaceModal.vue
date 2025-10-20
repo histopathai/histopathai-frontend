@@ -8,9 +8,9 @@
         <div class="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
           <TransitionChild as="template" enter="ease-out duration-300" enter-from="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95" enter-to="opacity-100 translate-y-0 sm:scale-100" leave="ease-in duration-200" leave-from="opacity-100 translate-y-0 sm:scale-100" leave-to="opacity-0 translate-y-4 sm:translate-y-0 sm:scale-95">
             <DialogPanel class="relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 sm:w-full sm:max-w-lg">
-              <form @submit.prevent="createWorkspace">
+              <form @submit.prevent="updateWorkspace">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
-                  <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900">Yeni Çalışma Alanı</DialogTitle>
+                  <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900">Çalışma Alanını Düzenle</DialogTitle>
 
                   <div class="mt-4 space-y-4">
                     <div>
@@ -124,9 +124,9 @@
                         <p v-if="errors.resourceURL" class="mt-1 text-sm text-red-600">{{ errors.resourceURL }}</p>
                     </div>
                   </div>
-                </div>
+                  </div>
                 <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                  <button type="submit" class="btn btn-primary sm:ml-3 sm:w-auto">Oluştur</button>
+                  <button type="submit" class="btn btn-primary sm:ml-3 sm:w-auto">Güncelle</button>
                   <button type="button" class="btn btn-outline mt-3 sm:mt-0 sm:w-auto" @click="$emit('close')">İptal</button>
                 </div>
               </form>
@@ -144,11 +144,14 @@ import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } fro
 
 const props = defineProps({
   isOpen: Boolean,
+  initialData: Object, // Düzenlenecek mevcut veriyi (ID dahil) prop olarak al
 });
-const emit = defineEmits(['close', 'created']);
+const emit = defineEmits(['close', 'updated']);
 
 const MAX_NAME_LENGTH = 50;
 
+// Form alanları (CreateWorkspaceModal ile aynı)
+const workspaceId = ref(null); // Güncellenecek ID'yi saklamak için
 const name = ref('');
 const organType = ref('');
 const description = ref('');
@@ -161,6 +164,24 @@ const resource = ref('private');
 
 const errors = ref({});
 
+// Prop'tan gelen veri değiştiğinde (modal her açıldığında) formu doldur
+watch(() => props.initialData, (newData) => {
+  if (newData) {
+    workspaceId.value = newData.id || null; // ID'yi sakla
+    name.value = newData.name || '';
+    organType.value = newData.organType || '';
+    description.value = newData.description || '';
+    license.value = newData.license || '';
+    organization.value = newData.organization || '';
+    resourceURL.value = newData.resourceURL || '';
+    releaseYear.value = newData.releaseYear || null;
+    releaseVersion.value = newData.releaseVersion || '';
+    resource.value = newData.resource || 'private';
+    errors.value = {}; // Hataları temizle
+  }
+}, { immediate: true }); // immediate: true -> component başlar başlamaz çalışır
+
+// CreateWorkspaceModal'dan kopyalanan watch
 watch(resource, (newValue) => {
   if (newValue === 'private') {
     resourceURL.value = '';
@@ -170,75 +191,47 @@ watch(resource, (newValue) => {
   }
 });
 
-const resetForm = () => {
-    name.value = '';
-    organType.value = '';
-    description.value = '';
-    license.value = '';
-    organization.value = '';
-    resourceURL.value = '';
-    releaseYear.value = null;
-    releaseVersion.value = '';
-    resource.value = 'private';
-    errors.value = {};
-};
-
-
+// CreateWorkspaceModal'dan kopyalanan validateForm
 const validateForm = () => {
   errors.value = {};
 
-  // 1. İsim kontrolü
   if (!name.value.trim()) {
     errors.value.name = 'Veri Seti adı zorunludur.';
   } else if (name.value.length > MAX_NAME_LENGTH) {
     errors.value.name = `Ad ${MAX_NAME_LENGTH} karakterden uzun olamaz.`;
   }
-
-  // 2. Organ Tipi
   if (!organType.value.trim()) {
     errors.value.organType = 'Organ tipi zorunludur.';
   }
-
-  // 3. Açıklama
   if (!description.value.trim()) {
     errors.value.description = 'Açıklama zorunludur.';
   }
-
-  // 4. Kurum
   if (!organization.value.trim()) {
     errors.value.organization = 'Kurum bilgisi zorunludur.';
   }
-
-  // 5. Lisans
   if (!license.value.trim()) {
     errors.value.license = 'Lisans bilgisi zorunludur.';
   }
-
-  // 6. Yıl
   if (!releaseYear.value) {
     errors.value.releaseYear = 'Yıl zorunludur.';
   } else if (releaseYear.value < 1900 || releaseYear.value > new Date().getFullYear() + 1) {
     errors.value.releaseYear = 'Geçerli bir yıl giriniz.';
   }
-
-  // 7. Kaynak URL (Koşullu zorunlu)
   if (resource.value === 'public' && !resourceURL.value.trim()) {
     errors.value.resourceURL = 'Halka açık kaynaklar için URL zorunludur.';
   }
-
-  // Eğer errors objesinde hiç anahtar yoksa, form geçerlidir
   return Object.keys(errors.value).length === 0;
 };
 
-// Çalışma alanı oluşturma fonksiyonu
-const createWorkspace = () => {
-  // Formu göndermeden önce doğrula
+// CreateWorkspaceModal'daki 'createWorkspace' fonksiyonunun 'update' versiyonu
+const updateWorkspace = () => {
   if (!validateForm()) {
-    return; // Form geçerli değilse işlemi durdur
+    return;
   }
 
-  // Form geçerliyse, veri objesini hazırla
-  const workspaceData = {
+  // Güncellenmiş veriyi bir obje olarak topla
+  const updatedData = {
+    id: workspaceId.value, // HANGİ workspace'in güncelleneceği bilgisi
     name: name.value.trim(),
     organType: organType.value.trim(),
     description: description.value.trim(),
@@ -250,12 +243,12 @@ const createWorkspace = () => {
   };
 
   if (resource.value === 'public') {
-    workspaceData.resourceURL = resourceURL.value.trim();
+    updatedData.resourceURL = resourceURL.value.trim();
+  } else {
+    updatedData.resourceURL = ''; // 'private' ise URL'in boş olduğundan emin ol
   }
 
-  // Event'i yayınla ve formu sıfırla
-  emit('created', workspaceData);
-  resetForm();
+  emit('updated', updatedData); // 'updated' event'i yayınla
+  emit('close'); // Modal'ı kapat
 };
-
 </script>
