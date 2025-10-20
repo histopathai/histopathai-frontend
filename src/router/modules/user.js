@@ -3,7 +3,7 @@ import DashboardLayout from '@/layouts/DashboardLayout.vue'
 import DashboardView from '@/modules/user/views/DashboardView.vue'
 import ProfileView from '@/modules/user/views/ProfileView.vue'
 import ImageViewer from '@/modules/viewer/components/ImageViewer.vue'
-import WorkspaceView from '@/modules/workspace/views/WorkspaceView.vue' // Yeni import
+import WorkspaceView from '@/modules/workspace/views/WorkSpaceView.vue' // Yeni import
 
 export default [
   {
