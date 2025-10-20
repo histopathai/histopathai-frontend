@@ -1,13 +1,15 @@
 <template>
-  <div class="px-4 py-6 sm:px-0">
-    <h1 class="text-3xl font-bold text-gray-900 mb-6">
-      Hoş Geldiniz, {{ authStore.user?.DisplayName || authStore.user?.Email }}!
-    </h1>
-    <p class="text-gray-700">
-      Bu sizin kişisel kontrol paneliniz. Yakında daha fazla özellik burada olacak.
-    </p>
+  <div class="space-y-8">
+    <div>
+      <h1 class="text-4xl font-bold tracking-tight text-gray-900">
+        Hoş Geldiniz, {{ authStore.user?.DisplayName || authStore.user?.Email }}!
+      </h1>
+      <p class="mt-2 text-lg text-gray-600">
+        Bu sizin kişisel kontrol paneliniz. Projelerinizi buradan yönetebilirsiniz.
+      </p>
+    </div>
 
-    <div class="mt-8 grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+    <div class="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
       <div class="card">
         <div class="card-body">
           <h3 class="text-lg font-medium text-gray-900">Son Etkinlikler</h3>
@@ -17,13 +19,11 @@
       <div class="card">
         <div class="card-body">
           <h3 class="text-lg font-medium text-gray-900">Hızlı Bağlantılar</h3>
-          <ul class="mt-2 space-y-2">
-            <li>
-              <router-link to="/dashboard/profile" class="text-primary-600 hover:text-primary-800"
-                >Profilimi Yönet</router-link
-              >
-            </li>
-          </ul>
+          <div class="mt-4">
+            <router-link to="/dashboard/profile" class="btn btn-primary">
+              Profilimi Yönet
+            </router-link>
+          </div>
         </div>
       </div>
     </div>
@@ -35,4 +35,5 @@ import { useAuthStore } from '@/stores/auth'
 
 const authStore = useAuthStore()
 </script>
+
 <style scoped></style>

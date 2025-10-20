@@ -111,6 +111,14 @@ class ImageCatalogAPI {
     return imageCatalogClient.get(`/images/${imageId}`, { params: { session: sessionId } });
   }
 
+  async deleteImage(imageId) {
+    if (!imageId) return Promise.reject(new Error('Image ID is required'));
+    const sessionId = await this.getValidSessionId();
+    // Silme işlemi için Bearer token gerekir, session yeterli olmayabilir.
+    // Bu yüzden normal imageCatalogClient'i kullanalım.
+    return imageCatalogClient.delete(`/images/${imageId}`);
+  }
+
   // --- YENİ EKLENEN VE DOĞRU OLAN FONKSİYON ---
   /**
    * 💾 Save annotations for an image

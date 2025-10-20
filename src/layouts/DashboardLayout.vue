@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-gray-50">
+  <div class="min-h-screen bg-gray-50 flex flex-col">
     <nav class="bg-white shadow-sm border-b border-gray-200">
       <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
@@ -12,6 +12,12 @@
               class="text-sm font-medium text-blue-600 hover:text-blue-800 gap-2 ml-4"
             >
               WSI Viewer
+            </router-link>
+             <router-link
+              to="/dashboard/workspaces"
+              class="text-sm font-medium text-blue-600 hover:text-blue-800 gap-2 ml-4"
+            >
+              Çalışma Alanlarım
             </router-link>
           </div>
 
@@ -66,7 +72,7 @@
       </div>
     </nav>
 
-    <main class="w-full h-full flex flex-col">
+    <main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
       <div
         v-if="authStore.user?.status === 'pending'"
         class="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4"
