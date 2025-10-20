@@ -1,4 +1,3 @@
-
 <template>
   <TransitionRoot as="template" :show="isOpen">
     <Dialog as="div" class="relative z-10" @close="!loading && $emit('close')">
@@ -13,7 +12,7 @@
                   <div class="mt-4 space-y-4">
                     <div>
                       <label for="file-upload" class="form-label">Görüntü Dosyası</label>
-                      <input id="file-upload" name="file-upload" type="file" @change="onFileChange" required class="form-input">
+                      <input id="file-upload" name="file-upload" type="file" @change="onFileChange" required class="form-input" accept="image/png, image/jpeg, image/tiff">
                     </div>
                      <div>
                         <label class="form-label">Teşhis</label>
@@ -48,17 +47,19 @@
 import { ref, reactive, watch } from 'vue';
 import { Dialog, DialogPanel, DialogTitle, TransitionRoot } from '@headlessui/vue';
 import { useToast } from 'vue-toastification';
-import axios from 'axios'; // API katmanı yerine direkt axios kullanabiliriz
 
 const props = defineProps({
   isOpen: Boolean,
   workspaceName: String,
+  organType: String,
 });
 
 const emit = defineEmits(['close', 'uploaded']);
 const toast = useToast();
 
 const file = ref(null);
+const fileBlobUrl = ref(null); // YENİ: Geçici Blob URL'i tutmak için
+
 const metadata = reactive({
   dataset_name: '',
   organ_type: '',
@@ -70,57 +71,77 @@ const metadata = reactive({
 const loading = ref(false);
 const error = ref('');
 
-watch(() => props.workspaceName, (newName) => {
-  metadata.dataset_name = newName;
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    metadata.dataset_name = props.workspaceName;
+    metadata.organ_type = props.organType;
+  } else {
+    // Modal kapandığında formu ve blob'u temizle
+    resetForm();
+  }
 });
 
 const onFileChange = (e) => {
-  file.value = e.target.files[0];
+  const selectedFile = e.target.files[0];
+  if (!selectedFile) {
+    file.value = null;
+    return;
+  }
+
+  file.value = selectedFile;
+
+  // Önceki blob URL'i varsa temizle (memory leak önlemi)
+  if (fileBlobUrl.value) {
+    URL.revokeObjectURL(fileBlobUrl.value);
+  }
+
+  // YENİ: Seçilen dosya için bir blob URL oluştur
+  fileBlobUrl.value = URL.createObjectURL(selectedFile);
 };
 
 const handleUpload = async () => {
-  if (!file.value) {
+  if (!file.value || !fileBlobUrl.value) {
     error.value = "Lütfen bir dosya seçin.";
     return;
   }
   loading.value = true;
   error.value = '';
 
-  const formData = new FormData();
-  formData.append('image', file.value);
-  Object.keys(metadata).forEach(key => {
-    formData.append(key, metadata[key]);
-  });
+  // Sahte veriyi oluştur
+  const fakeImageData = {
+    ...metadata,
+    id: `fake-${Date.now()}`,
+    file_name: file.value.name,
+    blobUrl: fileBlobUrl.value, // YENİ: Blob URL'i ekle
+    imageType: 'simple' // YENİ: OSD'ye bunun bir DZI olmadığını söylemek için
+  };
 
-  try {
-    const token = localStorage.getItem('auth_token');
+  setTimeout(() => {
+    emit('uploaded', fakeImageData);
+    // Formu sıfırla, *ancak* blobUrl'i ana component aldığı için onu burada revoke etme
+    file.value = null;
+    fileBlobUrl.value = null; // Referansı temizle
+    const fileInput = document.getElementById('file-upload');
+    if(fileInput) fileInput.value = null;
 
-    // --- DİNAMİK URL KULLANIMI ---
-    const backendUrl = import.meta.env.VITE_BACKEND_URL;
-    const uploadUrl = `${backendUrl}/images/upload`; // API client'larındaki gibi /api/v1'i zaten içeriyor.
-
-    await axios.post(uploadUrl, formData, {
-      headers: {
-        'Content-Type': 'multipart/form-data',
-        'Authorization': `Bearer ${token}`
-      },
-    });
-    // --- DÜZELTME SONU ---
-
-    emit('uploaded');
-    resetForm();
-  } catch (err) {
-    error.value = 'Yükleme sırasında bir hata oluştu: ' + (err.response?.data?.message || err.message);
-    toast.error(error.value);
-  } finally {
     loading.value = false;
-  }
+  }, 1000);
 };
 
 const resetForm = () => {
+    // Blob URL'i temizle
+    if (fileBlobUrl.value) {
+      URL.revokeObjectURL(fileBlobUrl.value);
+      fileBlobUrl.value = null;
+    }
     file.value = null;
+    const fileInput = document.getElementById('file-upload');
+    if(fileInput) fileInput.value = null;
+
     Object.keys(metadata).forEach(key => {
-        if(key !== 'dataset_name') metadata[key] = '';
+        if(key !== 'dataset_name' && key !== 'organ_type') {
+          metadata[key] = '';
+        }
     });
 }
 </script>
