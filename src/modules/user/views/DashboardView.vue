@@ -2,7 +2,7 @@
   <div class="space-y-8">
     <div>
       <h1 class="text-4xl font-bold tracking-tight text-gray-900">
-        Hoş Geldiniz, {{ authStore.user?.DisplayName || authStore.user?.Email }}!
+        Hoş Geldiniz {{ authStore.user?.DisplayName || authStore.user?.Email }}!
       </h1>
       <p class="mt-2 text-lg text-gray-600">
         Bu sizin kişisel kontrol paneliniz. Projelerinizi buradan yönetebilirsiniz.

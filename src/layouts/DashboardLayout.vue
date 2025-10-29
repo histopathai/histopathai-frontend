@@ -1,7 +1,7 @@
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col">
-    <nav class="bg-white shadow-sm border-b border-gray-200">
-      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+  <div class="min-h-screen bg-gray-100 flex flex-col">
+    <nav class="bg-white shadow-sm border-b border-gray-200 sticky top-0 z-10">
+      <div class="w-full mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex justify-between h-16">
           <div class="flex items-center">
             <router-link to="/dashboard" class="text-xl font-semibold text-gray-900">
@@ -9,13 +9,13 @@
             </router-link>
             <router-link
               to="/wsi-viewer"
-              class="text-sm font-medium text-blue-600 hover:text-blue-800 gap-2 ml-4"
+              class="text-sm font-medium text-gray-600 hover:text-indigo-600 ml-6"
             >
-              WSI Viewer
+              WSI Görüntüleyici
             </router-link>
              <router-link
               to="/dashboard/workspaces"
-              class="text-sm font-medium text-blue-600 hover:text-blue-800 gap-2 ml-4"
+              class="text-sm font-medium text-gray-600 hover:text-indigo-600 ml-4"
             >
               Çalışma Alanlarım
             </router-link>
@@ -25,25 +25,25 @@
             <router-link
               v-if="authStore.isAdmin"
               to="/admin"
-              class="text-primary-600 hover:text-primary-800 text-sm font-medium"
+              class="text-sm font-medium text-indigo-600 hover:text-indigo-800"
             >
-              Admin Panel
+              Admin Paneli
             </router-link>
 
             <div class="relative">
               <button
                 @click="toggleUserMenu"
-                class="user-menu-button flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary-500"
+                class="user-menu-button flex items-center space-x-2 text-sm rounded-full focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
               >
                 <div
-                  class="h-8 w-8 rounded-full bg-primary-600 flex items-center justify-center overflow-hidden"
+                  class="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center overflow-hidden"
                 >
                   <span class="text-white text-sm font-medium">
                     {{ authStore.userInitials }}
                   </span>
                 </div>
-                <span class="text-gray-700">
-                  {{ authStore.user?.displayName || authStore.user?.email || 'User' }}
+                <span class="text-gray-700 hidden sm:inline">
+                  {{ authStore.user?.displayName || authStore.user?.email || 'Kullanıcı' }}
                 </span>
               </button>
 
@@ -56,14 +56,14 @@
                   class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                   @click="showUserMenu = false"
                 >
-                  Profile
+                  Profilim
                 </router-link>
                 <div class="border-t border-gray-100"></div>
                 <button
                   @click="handleLogout"
                   class="block w-full text-left px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
                 >
-                  Logout
+                  Çıkış Yap
                 </button>
               </div>
             </div>
@@ -72,7 +72,7 @@
       </div>
     </nav>
 
-    <main class="flex-1 w-full max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <main :class="mainClasses">
       <div
         v-if="authStore.user?.status === 'pending'"
         class="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4"
@@ -93,9 +93,9 @@
             </svg>
           </div>
           <div class="ml-3">
-            <h3 class="text-sm font-medium text-yellow-800">Your Account is Pending Approval</h3>
+            <h3 class="text-sm font-medium text-yellow-800">Hesabınız Onay Bekliyor</h3>
             <p class="mt-1 text-sm text-yellow-700">
-              Your account is awaiting administrator approval. Some features may be limited.
+              Hesabınız yönetici onayı bekliyor. Bazı özellikler kısıtlı olabilir.
             </p>
           </div>
         </div>
@@ -106,51 +106,36 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+// DEĞİŞİKLİK: `computed` ve `useRoute` eklendi
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router' // <-- useRoute eklendi
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 
 const router = useRouter()
+const route = useRoute() // <-- route referansı eklendi
 const authStore = useAuthStore()
 const toast = useToast()
-
 const appName = import.meta.env.VITE_APP_NAME || 'HistopathAI'
 const showUserMenu = ref(false)
+const toggleUserMenu = () => { showUserMenu.value = !showUserMenu.value }
+const handleLogout = () => { showUserMenu.value = false; authStore.logout(); toast.success('Başarıyla çıkış yapıldı.'); router.push('/auth/login') }
+const handleClickOutside = (event) => { const dropdownElement = document.querySelector('.user-dropdown'); const buttonElement = document.querySelector('.user-menu-button'); if (dropdownElement && buttonElement) { if (!dropdownElement.contains(event.target) && !buttonElement.contains(event.target)) { showUserMenu.value = false } } }
 
-const toggleUserMenu = () => {
-  showUserMenu.value = !showUserMenu.value
-}
-
-const handleLogout = () => {
-  showUserMenu.value = false
-  authStore.logout()
-  toast.success('Successfully logged out.')
-  router.push('/auth/login')
-}
-
-// Click outside handler
-const handleClickOutside = (event) => {
-  const dropdownElement = document.querySelector('.user-dropdown')
-  const buttonElement = document.querySelector('.user-menu-button')
-
-  if (dropdownElement && buttonElement) {
-    if (!dropdownElement.contains(event.target) && !buttonElement.contains(event.target)) {
-      showUserMenu.value = false
-    }
+// DEĞİŞİKLİK: mainClasses adında computed property eklendi
+const mainClasses = computed(() => {
+  if (route.meta.fullWidth) {
+    // WSI Görüntüleyici için: padding'siz VE EBEVEYN OLARAK FLEX ÖZELLİKLİ
+    return 'flex-1 w-full flex' // <-- 'flex' eklendi
   }
-}
-
-// Add/remove event listener
-onMounted(() => {
-  document.addEventListener('click', handleClickOutside)
+  // Diğer sayfalar için: normal padding'li layout
+  return 'flex-1 w-full mx-auto py-0 px-4 sm:px-6 lg:px-8'
 })
 
-onUnmounted(() => {
-  document.removeEventListener('click', handleClickOutside)
-})
+onMounted(() => { document.addEventListener('click', handleClickOutside) })
+onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 </script>
 
 <style scoped>
-/* DashboardLayout specific styles can be added here */
+/* DashboardLayout'a özel stil gerekmiyor, main.css'ten alacak */
 </style>

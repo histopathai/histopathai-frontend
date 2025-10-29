@@ -2,7 +2,7 @@
   <div class="px-4 py-6 sm:px-0">
     <h1 class="text-3xl font-bold text-gray-900 mb-6">Yönetici Paneli</h1>
     <p class="text-gray-700">
-      Hoş Geldiniz, <strong>{{ authStore.user?.displayName || authStore.user?.email }}</strong
+      Hoş Geldiniz <strong>{{ authStore.user?.displayName || authStore.user?.email }}</strong
       >! Bu sizin yönetici kontrol paneliniz. Buradan kullanıcıları ve sistem ayarlarını
       yönetebilirsiniz.
     </p>
