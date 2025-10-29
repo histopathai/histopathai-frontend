@@ -92,7 +92,6 @@
                   </div>
                   <div class="p-2 border-t border-gray-100">
                       <p class="text-xs font-semibold truncate mb-1.5">{{ image.file_name }}</p>
-                      {/* BUTONLAR ESKİ HALİNE DÖNDÜ (Altı Çizili) */}
                       <div class="flex justify-end gap-2 text-xs">
                         <button @click="viewImage(image)" class="btn-image-action text-blue-600 hover:text-blue-800">Görüntüle</button>
                         <button @click="promptMoveImage(image, name, patient.id, imageIndex)" class="btn-image-action text-purple-600 hover:text-purple-800">Taşı</button>

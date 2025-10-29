@@ -1,76 +1,74 @@
 <template>
-  <div id="annotations-tool">
-    <label>Organ: <textarea :value="organ" @input="$emit('update:organ', $event.target.value)" rows="1" /> </label>
-    <label>Diagnosis: <textarea :value="diagnosis" @input="$emit('update:diagnosis', $event.target.value)" rows="1" /></label>
-    <label>Grade: <textarea :value="grade" @input="$emit('update:grade', $event.target.value)" rows="1" /></label>
-    <label>Gender: <textarea :value="gender" @input="$emit('update:gender', $event.target.value)" rows="1" /></label>
-    <label>Age: <input type="number" :value="age" @input="$emit('update:age', $event.target.value)" min="0" max="99" /></label>
+  <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-x-4 gap-y-2 items-end">
+    <div>
+      <label for="anno-organ" class="form-label text-xs">Organ</label>
+      <input
+        id="anno-organ"
+        type="text"
+        :value="organ"
+        @input="$emit('update:organ', $event.target.value)"
+        class="form-input form-input-sm"
+        placeholder="Organ..."
+      />
+    </div>
+    <div>
+      <label for="anno-diagnosis" class="form-label text-xs">Teşhis</label>
+      <input
+        id="anno-diagnosis"
+        type="text"
+        :value="diagnosis"
+        @input="$emit('update:diagnosis', $event.target.value)"
+        class="form-input form-input-sm"
+        placeholder="Teşhis..."
+      />
+    </div>
+    <div>
+      <label for="anno-grade" class="form-label text-xs">Derecelendirme</label>
+      <input
+        id="anno-grade"
+        type="text"
+        :value="grade"
+        @input="$emit('update:grade', $event.target.value)"
+        class="form-input form-input-sm"
+        placeholder="Derecelendirme..."
+      />
+    </div>
+
+    <div>
+      <label for="anno-gender" class="form-label text-xs">Cinsiyet</label>
+      <select
+        id="anno-gender"
+        :value="gender"
+        @change="$emit('update:gender', $event.target.value)"
+        class="form-input form-input-sm"
+      >
+        <option value="" disabled>Seçiniz...</option>
+        <option value="Erkek">Erkek</option>
+        <option value="Kadın">Kadın</option>
+        <option value="Belirtmek istemiyor">Belirtmek istemiyor</option>
+      </select>
+    </div>
+    <div>
+      <label for="anno-age" class="form-label text-xs">Yaş</label>
+      <input
+        id="anno-age"
+        type="number"
+        :value="age"
+        @input="$emit('update:age', $event.target.value)"
+        class="form-input form-input-sm"
+        placeholder="Yaş..."
+        min="0"
+        max="150"
+      />
+    </div>
   </div>
 </template>
 
 <script setup>
-defineProps({
-  organ: String,
-  diagnosis: String,
-  grade: String,
-  age: Number,
-  gender: String
-});
-
-defineEmits([
-  'update:organ',
-  'update:diagnosis',
-  'update:grade',
-  'update:age',
-  'update:gender',
-]);
+defineProps({ organ: String, diagnosis: String, grade: String, age: Number, gender: String });
+defineEmits(['update:organ', 'update:diagnosis', 'update:grade', 'update:age', 'update:gender']);
 </script>
 
 <style scoped>
-#annotations-tool {
-  padding: 8px 12px;
-  min-height: unset;
-  display: flex;
-  justify-content: flex-start;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 8px;
-  border: #3b82f6 1px solid;
-  border-radius: 8px;
-  box-shadow: 0 4px 12px rgba(202, 9, 9, 0.2);
-}
-
-#annotations-tool label {
-  margin: 0 0 5px 0;
-  color: #000000;
-  font-size: 14px;
-  text-align: left;
-}
-
-#annotations-tool textarea {
-  width: 100%;
-  resize: none;
-  padding: 8px;
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #444;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
-  line-height: 1.5;
-  word-wrap: break-word;
-}
-
-#annotations-tool input[type="number"] {
-  width: 100%;
-  padding: 8px;
-  background-color: #ffffff;
-  color: #000000;
-  border: 1px solid #444;
-  border-radius: 4px;
-  box-sizing: border-box;
-  font-family: inherit;
-  font-size: 14px;
-}
+/* Stil gerekmiyor, main.css'teki .form-label ve .form-input-sm kullanılacak */
 </style>

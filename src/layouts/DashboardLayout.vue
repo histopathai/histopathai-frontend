@@ -72,7 +72,7 @@
       </div>
     </nav>
 
-    <main class="flex-1 w-full mx-auto py-8 px-4 sm:px-6 lg:px-8">
+    <main :class="mainClasses">
       <div
         v-if="authStore.user?.status === 'pending'"
         class="mb-6 bg-yellow-50 border border-yellow-200 rounded-md p-4"
@@ -106,12 +106,14 @@
 </template>
 
 <script setup>
-import { ref, onMounted, onUnmounted } from 'vue'
-import { useRouter } from 'vue-router'
+// DEĞİŞİKLİK: `computed` ve `useRoute` eklendi
+import { ref, onMounted, onUnmounted, computed } from 'vue'
+import { useRouter, useRoute } from 'vue-router' // <-- useRoute eklendi
 import { useAuthStore } from '@/stores/auth'
 import { useToast } from 'vue-toastification'
 
 const router = useRouter()
+const route = useRoute() // <-- route referansı eklendi
 const authStore = useAuthStore()
 const toast = useToast()
 const appName = import.meta.env.VITE_APP_NAME || 'HistopathAI'
@@ -119,6 +121,17 @@ const showUserMenu = ref(false)
 const toggleUserMenu = () => { showUserMenu.value = !showUserMenu.value }
 const handleLogout = () => { showUserMenu.value = false; authStore.logout(); toast.success('Başarıyla çıkış yapıldı.'); router.push('/auth/login') }
 const handleClickOutside = (event) => { const dropdownElement = document.querySelector('.user-dropdown'); const buttonElement = document.querySelector('.user-menu-button'); if (dropdownElement && buttonElement) { if (!dropdownElement.contains(event.target) && !buttonElement.contains(event.target)) { showUserMenu.value = false } } }
+
+// DEĞİŞİKLİK: mainClasses adında computed property eklendi
+const mainClasses = computed(() => {
+  if (route.meta.fullWidth) {
+    // WSI Görüntüleyici için: padding'siz VE EBEVEYN OLARAK FLEX ÖZELLİKLİ
+    return 'flex-1 w-full flex' // <-- 'flex' eklendi
+  }
+  // Diğer sayfalar için: normal padding'li layout
+  return 'flex-1 w-full mx-auto py-0 px-4 sm:px-6 lg:px-8'
+})
+
 onMounted(() => { document.addEventListener('click', handleClickOutside) })
 onUnmounted(() => { document.removeEventListener('click', handleClickOutside) })
 </script>
