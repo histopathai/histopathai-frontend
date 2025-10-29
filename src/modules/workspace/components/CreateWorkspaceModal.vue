@@ -11,7 +11,6 @@
               <form @submit.prevent="createWorkspace">
                 <div class="bg-white px-4 pt-5 pb-4 sm:p-6 sm:pb-4">
                   <DialogTitle as="h3" class="text-lg font-medium leading-6 text-gray-900">Yeni Çalışma Alanı</DialogTitle>
-
                   <div class="mt-4 space-y-4">
                     <div>
                       <div class="flex justify-between items-center">
@@ -53,7 +52,7 @@
                         class="form-input"
                         :class="{'border-red-500': errors.description}"
                         rows="3"
-                        placeholder="Projenin veya veri setinin kısa açıklaması girilmelidir."
+                        placeholder="Projenin veya veri setinin kısa bir açıklaması girilmelidir."
                       ></textarea>
                        <p v-if="errors.description" class="mt-1 text-sm text-red-600">{{ errors.description }}</p>
                     </div>
@@ -124,10 +123,11 @@
                         <p v-if="errors.resourceURL" class="mt-1 text-sm text-red-600">{{ errors.resourceURL }}</p>
                     </div>
                   </div>
+
                 </div>
                 <div class="bg-gray-50 px-4 py-3 sm:flex sm:flex-row-reverse sm:px-6">
-                  <button type="submit" class="btn btn-primary sm:ml-3 sm:w-auto">Oluştur</button>
-                  <button type="button" class="btn btn-outline mt-3 sm:mt-0 sm:w-auto" @click="$emit('close')">İptal</button>
+                  <button type="submit" class="btn btn-primary w-full sm:ml-3 sm:w-auto">Oluştur</button>
+                  <button type="button" class="btn btn-outline mt-3 w-full sm:mt-0 sm:w-auto" @click="$emit('close')">İptal</button>
                 </div>
               </form>
             </DialogPanel>
@@ -142,13 +142,9 @@
 import { ref, watch } from 'vue';
 import { Dialog, DialogPanel, DialogTitle, TransitionChild, TransitionRoot } from '@headlessui/vue';
 
-const props = defineProps({
-  isOpen: Boolean,
-});
+const props = defineProps({ isOpen: Boolean });
 const emit = defineEmits(['close', 'created']);
-
 const MAX_NAME_LENGTH = 50;
-
 const name = ref('');
 const organType = ref('');
 const description = ref('');
@@ -158,104 +154,17 @@ const resourceURL = ref('');
 const releaseYear = ref(null);
 const releaseVersion = ref('');
 const resource = ref('private');
-
 const errors = ref({});
-
-watch(resource, (newValue) => {
-  if (newValue === 'private') {
-    resourceURL.value = '';
-    if (errors.value.resourceURL) {
-      delete errors.value.resourceURL;
-    }
-  }
-});
-
-const resetForm = () => {
-    name.value = '';
-    organType.value = '';
-    description.value = '';
-    license.value = '';
-    organization.value = '';
-    resourceURL.value = '';
-    releaseYear.value = null;
-    releaseVersion.value = '';
-    resource.value = 'private';
-    errors.value = {};
-};
-
-
-const validateForm = () => {
-  errors.value = {};
-
-  // 1. İsim kontrolü
-  if (!name.value.trim()) {
-    errors.value.name = 'Veri Seti adı zorunludur.';
-  } else if (name.value.length > MAX_NAME_LENGTH) {
-    errors.value.name = `Ad ${MAX_NAME_LENGTH} karakterden uzun olamaz.`;
-  }
-
-  // 2. Organ Tipi
-  if (!organType.value.trim()) {
-    errors.value.organType = 'Organ tipi zorunludur.';
-  }
-
-  // 3. Açıklama
-  if (!description.value.trim()) {
-    errors.value.description = 'Açıklama zorunludur.';
-  }
-
-  // 4. Kurum
-  if (!organization.value.trim()) {
-    errors.value.organization = 'Kurum bilgisi zorunludur.';
-  }
-
-  // 5. Lisans
-  if (!license.value.trim()) {
-    errors.value.license = 'Lisans bilgisi zorunludur.';
-  }
-
-  // 6. Yıl
-  if (!releaseYear.value) {
-    errors.value.releaseYear = 'Yıl zorunludur.';
-  } else if (releaseYear.value < 1900 || releaseYear.value > new Date().getFullYear() + 1) {
-    errors.value.releaseYear = 'Geçerli bir yıl giriniz.';
-  }
-
-  // 7. Kaynak URL (Koşullu zorunlu)
-  if (resource.value === 'public' && !resourceURL.value.trim()) {
-    errors.value.resourceURL = 'Halka açık kaynaklar için URL zorunludur.';
-  }
-
-  // Eğer errors objesinde hiç anahtar yoksa, form geçerlidir
-  return Object.keys(errors.value).length === 0;
-};
-
-// Çalışma alanı oluşturma fonksiyonu
-const createWorkspace = () => {
-  // Formu göndermeden önce doğrula
-  if (!validateForm()) {
-    return; // Form geçerli değilse işlemi durdur
-  }
-
-  // Form geçerliyse, veri objesini hazırla
-  const workspaceData = {
-    name: name.value.trim(),
-    organType: organType.value.trim(),
-    description: description.value.trim(),
-    resource: resource.value,
-    organization: organization.value.trim(),
-    license: license.value.trim(),
-    releaseYear: releaseYear.value,
-    releaseVersion: releaseVersion.value.trim(),
-  };
-
-  if (resource.value === 'public') {
-    workspaceData.resourceURL = resourceURL.value.trim();
-  }
-
-  // Event'i yayınla ve formu sıfırla
-  emit('created', workspaceData);
-  resetForm();
-};
-
+watch(resource, (newValue) => { if (newValue === 'private') { resourceURL.value = ''; if (errors.value.resourceURL) delete errors.value.resourceURL; } });
+const resetForm = () => { name.value = ''; organType.value = ''; description.value = ''; license.value = ''; organization.value = ''; resourceURL.value = ''; releaseYear.value = null; releaseVersion.value = ''; resource.value = 'private'; errors.value = {}; };
+const validateForm = () => { errors.value = {}; if (!name.value.trim()) errors.value.name = 'Veri Seti adı zorunludur.'; else if (name.value.length > MAX_NAME_LENGTH) errors.value.name = `Ad ${MAX_NAME_LENGTH} karakterden uzun olamaz.`; if (!organType.value.trim()) errors.value.organType = 'Organ tipi zorunludur.'; if (!description.value.trim()) errors.value.description = 'Açıklama zorunludur.'; if (!organization.value.trim()) errors.value.organization = 'Kurum bilgisi zorunludur.'; if (!license.value.trim()) errors.value.license = 'Lisans bilgisi zorunludur.'; if (!releaseYear.value) errors.value.releaseYear = 'Yıl zorunludur.'; else if (releaseYear.value < 1900 || releaseYear.value > new Date().getFullYear() + 1) errors.value.releaseYear = 'Geçerli bir yıl giriniz.'; if (resource.value === 'public' && !resourceURL.value.trim()) errors.value.resourceURL = 'Halka açık kaynaklar için URL zorunludur.'; return Object.keys(errors.value).length === 0; };
+const createWorkspace = () => { if (!validateForm()) return; const workspaceData = { name: name.value.trim(), organType: organType.value.trim(), description: description.value.trim(), resource: resource.value, organization: organization.value.trim(), license: license.value.trim(), releaseYear: releaseYear.value, releaseVersion: releaseVersion.value.trim() }; if (resource.value === 'public') workspaceData.resourceURL = resourceURL.value.trim(); emit('created', workspaceData); resetForm(); };
 </script>
+
+<style scoped>
+.btn { @apply inline-flex items-center justify-center rounded-md border border-transparent px-4 py-2 text-sm font-medium shadow-sm transition-all duration-150 ease-in-out focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed; }
+.btn-primary { @apply bg-indigo-600 text-white hover:bg-indigo-700 focus:ring-indigo-500; }
+.btn-outline { @apply border-gray-300 bg-white text-gray-700 hover:bg-gray-50 focus:ring-indigo-500; }
+.form-label { @apply block text-sm font-medium text-gray-700; }
+.form-input { @apply mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm; }
+</style>
