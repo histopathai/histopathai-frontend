@@ -1,8 +1,6 @@
-// src/api/auth.js
 import axios from 'axios'
 
-// Fix: Use VITE_BACKEND_URL instead of BACKEND_URL
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8000/api/v1'
+const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || 'http://localhost:8080/api/v1'
 
 const authClient = axios.create({
   baseURL: BACKEND_URL, // https://auth-service.../api/v1
@@ -12,7 +10,6 @@ const authClient = axios.create({
   },
 })
 
-// Request interceptor
 authClient.interceptors.request.use(
   (config) => {
     const token = localStorage.getItem('auth_token')
@@ -24,10 +21,9 @@ authClient.interceptors.request.use(
   },
   (error) => {
     return Promise.reject(error)
-  },
+  }
 )
 
-// Response interceptor
 authClient.interceptors.response.use(
   (response) => {
     return response
@@ -65,7 +61,7 @@ class UserAPI {
   }
 
   changePassword(payload) {
-    return this.client.put('/user/password', payload)
+    return this.client.put('/auth/password', payload)
   }
 
   deleteAccount() {
@@ -79,15 +75,16 @@ class AdminAPI {
   }
 
   getAllUsers() {
-    return this.client.get('/admin/users/')
+    
+    return this.client.get('/admin/users')
   }
 
   getUser(uid) {
     return this.client.get(`/admin/users/${uid}`)
   }
 
-  approveUser(uid, payload = { role: 'user' }) {
-    return this.client.post(`/admin/users/${uid}/approve`, payload)
+  approveUser(uid) {
+    return this.client.post(`/admin/users/${uid}/approve`)
   }
 
   suspendUser(uid) {
@@ -95,11 +92,12 @@ class AdminAPI {
   }
 
   changeUserPassword(uid, payload) {
-    return this.client.put(`/admin/users/${uid}/password`, payload)
+   
+    return this.client.post(`/admin/users/${uid}/change-password`, payload)
   }
 
   makeAdmin(uid) {
-    return this.client.post(`/admin/users/${uid}/promote`)
+    return this.client.post(`/admin/users/${uid}/make-admin`)
   }
 }
 
