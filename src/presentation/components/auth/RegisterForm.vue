@@ -95,9 +95,9 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/application/state/auth.store.js'
 import { useToast } from 'vue-toastification'
 
 const email = ref('')
@@ -112,6 +112,7 @@ const confirmPasswordError = ref(null)
 const authStore = useAuthStore()
 const router = useRouter()
 const toast = useToast()
+const authService = inject('authService')
 
 const validateForm = () => {
   emailError.value = null
@@ -145,31 +146,21 @@ const validateForm = () => {
 }
 
 const handleRegister = async () => {
-  if (!validateForm()) return
+  if (!validateForm()) return;
+  const payload = {
+    email: email.value,
+    password: password.value,
+    displayName: displayName.value || undefined,
+  };
 
-  authStore.loading = true
-  authStore.error = null
+  const result = await authService.handleRegistration(payload);
 
-  try {
-    const payload = {
-      email: email.value,
-      password: password.value,
-      displayName: displayName.value || undefined,
-    }
-
-    const result = await authStore.register(payload)
-
-    if (result.success) {
-      toast.success(result.message || 'Kayıt başarılı! Yönetici onayı bekleniyor.')
-      router.push('/auth/login')
-    } else {
-      toast.error(result.error || 'Kayıt başarısız.')
-    }
-  } catch (err) {
-    console.error('Kayıt Hatası:', err)
-    toast.error(authStore.error || 'Beklenmeyen bir hata oluştu.')
-  } finally {
-    authStore.loading = false
+  if (result.success) {
+    toast.success(result.message || 'Kayıt başarılı! Yönetici onayı bekleniyor.');
+    router.push('/auth/login');
+  } else {
+    toast.error(result.message || 'Kayıt başarısız.');
   }
-}
+
+};
 </script>

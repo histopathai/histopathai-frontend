@@ -77,21 +77,26 @@
 </template>
 
 <script setup>
-import { useAuthStore, USER_STATUS, USER_ROLES } from '@/stores/auth'
-import { onMounted } from 'vue'
-import { useToast } from 'vue-toastification'
+import { useAuthStore, USER_STATUS, USER_ROLES } from '@/application/state/auth.store.js'; // <-- YENİ YOL
+import { onMounted, inject } from 'vue';
+import { useToast } from 'vue-toastification';
 
 const authStore = useAuthStore()
 const toast = useToast()
+const authService = inject('authService')
 
 onMounted(async () => {
+  // Sadece state'de kullanıcı yoksa servisi çağır
   if (authStore.isAuthenticated && !authStore.user) {
-    const result = await authStore.getProfile()
+    // ESKİ KOD: const result = await authStore.getProfile()
+    // YENİ KOD:
+    const result = await authService.handleGetProfile();
+
     if (!result.success) {
-      toast.error(result.error || 'Profil bilgileri yüklenemedi.')
+      toast.error(result.message || 'Profil bilgileri yüklenemedi.');
     }
   }
-})
+});
 
 const displayStatus = (status) => {
   switch (status) {

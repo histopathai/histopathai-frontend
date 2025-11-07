@@ -80,16 +80,17 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, inject } from 'vue'
 import { useRouter } from 'vue-router'
-import { useAuthStore } from '@/stores/auth'
+import { useAuthStore } from '@/application/state/auth.store.js';
 import { useToast } from 'vue-toastification'
-import { auth } from '@/main.js'
-import { signInWithEmailAndPassword } from 'firebase/auth'
+
 
 const authStore = useAuthStore()
 const router = useRouter()
 const toast = useToast()
+
+const authService = inject('authService')
 
 const email = ref('')
 const password = ref('')
@@ -119,41 +120,14 @@ const validateForm = () => {
 }
 
 const handleLogin = async () => {
-  if (!validateForm()) return
+  if (!validateForm()) return;
+  const result = await authService.handleLogin(email.value, password.value);
 
-  authStore.loading = true
-  authStore.error = null
-
-  try {
-    const userCredential = await signInWithEmailAndPassword(auth, email.value, password.value)
-    const idToken = await userCredential.user.getIdToken()
-
-    await authStore.verifyToken(idToken) // Bu fonksiyon hata fırlatmalı
-    toast.success('Giriş başarılı!')
-    router.push('/dashboard')
-  } catch (error) {
-    console.error('Giriş Hatası:', error)
-
-    let errorMessage = 'Giriş başarısız oldu. Lütfen bilgilerinizi kontrol edin.'
-    switch (error.code) {
-      case 'auth/user-not-found':
-      case 'auth/wrong-password':
-        errorMessage = 'Geçersiz e-posta veya şifre.'
-        break
-      case 'auth/invalid-email':
-        errorMessage = 'Geçersiz e-posta formatı.'
-        break
-      case 'auth/user-disabled':
-        errorMessage = 'Hesabınız devre dışı bırakılmış.'
-        break
-      default:
-        errorMessage = error.response?.data?.message || errorMessage
-    }
-
-    toast.error(errorMessage)
-    authStore.error = errorMessage
-  } finally {
-    authStore.loading = false
+  if (result.success) {
+    toast.success('Giriş başarılı!');
+    router.push('/dashboard');
+  } else {
+    toast.error(result.message || 'Giriş başarısız oldu.');
   }
-}
+};
 </script>

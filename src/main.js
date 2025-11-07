@@ -1,7 +1,7 @@
 import { createApp } from 'vue'
 import { createPinia } from 'pinia'
 import Toast from 'vue-toastification' // Toast bildirimleri için
-import router from './router'
+import router from '@/application/router'
 import App from './App.vue'
 import { initializeApp } from 'firebase/app' // Firebase uygulaması için
 import { getAuth } from 'firebase/auth'
@@ -9,7 +9,12 @@ import { getAuth } from 'firebase/auth'
 import './assets/css/main.css'
 import 'vue-toastification/dist/index.css'
 
-import { useAuthStore } from './stores/auth'
+import { AuthRepositoryImpl } from '@/infrastructure/repositories/AuthRepository.impl.js';
+import { RegisterUserUseCase } from '@/core/use-cases/auth/RegisterUser.usecase.js';
+import { VerifyTokenUseCase } from '@/core/use-cases/auth/VerifyToken.usecase.js';
+import { AuthService } from '@/application/services/AuthService.js';
+import { useAuthStore } from '@/application/state/auth.store.js';
+import { GetUserProfileUseCase } from '@/core/use-cases/auth/GetUserProfile.usecase.js';
 
 const firebaseConfig = {
   apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
@@ -49,8 +54,19 @@ app.use(pinia)
 app.use(router)
 app.use(Toast, toastOptions)
 
+const authRepository = new AuthRepositoryImpl();
+const registerUserUseCase = new RegisterUserUseCase(authRepository);
+const verifyTokenUseCase = new VerifyTokenUseCase(authRepository);
+const getUserProfileUseCase = new GetUserProfileUseCase(authRepository); // <-- YENİ
+const authService = new AuthService(
+  registerUserUseCase,
+  verifyTokenUseCase,
+  authRepository,
+  getUserProfileUseCase
+);
+app.provide('authService', authService);
+
 const authStore = useAuthStore(pinia)
 authStore.initializeAuth()
-console.log('Vue uygulaması başlatılıyor ve DOMa bağlanıyor!') // <-- Bu satırı ekle
 
 app.mount('#app')
